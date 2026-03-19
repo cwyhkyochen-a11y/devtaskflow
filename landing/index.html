@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevTaskFlow — Describe it. Build it. Ship it.</title>
+<meta name="description" content="用自然语言发起开发任务，AI 驱动的开发流水线。Open Source · No Code Needed.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0D1117;
+    color: #f0f6fc;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* GitHub logo top right */
+  .github-link {
+    position: fixed;
+    top: 24px;
+    right: 32px;
+    z-index: 10;
+    color: #8b949e;
+    transition: color 0.2s;
+  }
+  .github-link:hover { color: #f0f6fc; }
+  .github-link svg { width: 36px; height: 36px; fill: currentColor; }
+
+  /* Main content */
+  .hero { text-align: center; z-index: 2; padding: 0 24px; }
+
+  .title {
+    font-size: 72px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #58a6ff, #bc8cff, #f778ba);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 28px;
+    font-weight: 400;
+    color: #c9d1d9;
+    letter-spacing: 2px;
+    margin-bottom: 40px;
+  }
+
+  /* Buttons */
+  .buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn svg { width: 20px; height: 20px; fill: currentColor; flex-shrink: 0; }
+
+  .btn-github {
+    background: #f0f6fc;
+    color: #0D1117;
+  }
+  .btn-github:hover {
+    background: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(240, 246, 252, 0.15);
+  }
+
+  .btn-clawhub {
+    background: transparent;
+    color: #bc8cff;
+    border: 2px solid #bc8cff;
+  }
+  .btn-clawhub:hover {
+    background: rgba(188, 140, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(188, 140, 255, 0.15);
+  }
+
+  /* Install command */
+  .install-box {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 15px;
+    max-width: 560px;
+    width: 100%;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .install-box:hover { border-color: #484f58; }
+
+  .install-cmd {
+    color: #9ece6a;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: all;
+  }
+  .install-cmd .cmd-prefix { color: #484f58; }
+
+  .copy-btn {
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .copy-btn:hover { background: #30363d; color: #f0f6fc; }
+  .copy-btn.copied { background: #238636; color: #fff; border-color: #238636; }
+
+  /* Tags */
+  .tags {
+    font-size: 15px;
+    color: #484f58;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* Ambient glow */
+  .glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    pointer-events: none;
+  }
+  .glow-1 { background: #58a6ff; top: -200px; left: -100px; }
+  .glow-2 { background: #bc8cff; bottom: -200px; right: -100px; }
+
+  /* Stars */
+  .stars {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+  .star {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: #8b949e;
+    border-radius: 50%;
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.8; }
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .title { font-size: 42px; }
+    .subtitle { font-size: 18px; }
+    .buttons { flex-direction: column; align-items: center; }
+    .install-box { font-size: 13px; padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+  <div class="stars" id="stars"></div>
+
+  <a class="github-link" href="https://github.com/cwyhkyochen-a11y/devtaskflow" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+  </a>
+
+  <div class="hero">
+    <h1 class="title">DevTaskFlow</h1>
+    <p class="subtitle">Describe it. Build it. Ship it.</p>
+
+    <div class="buttons">
+      <a class="btn btn-github" href="https://github.com/cwyhkyochen-a11y/devtaskflow" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        GitHub
+      </a>
+      <a class="btn btn-clawhub" href="https://clawhub.com/devtaskflow" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+        ClawHub
+      </a>
+    </div>
+
+    <div class="install-box">
+      <span class="install-cmd"><span class="cmd-prefix">$ </span>npm install -g devtaskflow</span>
+      <button class="copy-btn" onclick="copyInstall(this)">Copy</button>
+    </div>
+
+    <p class="tags">Open Source · AI-Powered · No Code Needed</p>
+  </div>
+
+  <script>
+    // Stars
+    const starsEl = document.getElementById('stars');
+    for (let i = 0; i < 80; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.animationDelay = Math.random() * 3 + 's';
+      star.style.width = star.style.height = (Math.random() * 2 + 1) + 'px';
+      starsEl.appendChild(star);
+    }
+
+    // Copy install command
+    function copyInstall(btn) {
+      navigator.clipboard.writeText('npm install -g devtaskflow').then(() => {
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

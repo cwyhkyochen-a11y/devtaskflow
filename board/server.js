@@ -25,6 +25,26 @@ function readFirstN(filePath, n) {
   return data.slice(0, n);
 }
 
+// 脱敏：过滤 state 和 config 中的敏感字段
+function sanitizeState(state) {
+  if (!state || typeof state !== 'object') return state;
+  const { publish, ...rest } = state;
+  // 移除可能包含 token/路径信息的字段
+  delete rest.last_error_detail;
+  return rest;
+}
+
+function sanitizeDeploy(deploy) {
+  if (!deploy || typeof deploy !== 'object') return {};
+  // 只返回非敏感的部署状态信息，不暴露 host/user/path/credentials
+  return {
+    adapter: deploy.adapter || '',
+    has_build_command: !!deploy.build_command,
+    has_deploy_command: !!deploy.deploy_command,
+    has_restart_command: !!deploy.restart_command,
+  };
+}
+
 app.get('/api/projects', (req, res) => {
   const projects = loadProjects();
   const result = projects.map(p => {
@@ -41,8 +61,8 @@ app.get('/api/projects', (req, res) => {
       current_version: p.current_version,
       updated_at: p.updated_at,
       note: p.note,
-      version_state: state,
-      deploy: config.deploy || {},
+      version_state: sanitizeState(state),
+      deploy: sanitizeDeploy(config.deploy),
       requirements_summary: reqSummary,
     };
   });
@@ -64,9 +84,13 @@ app.get('/api/projects/:name', (req, res) => {
   const reqPath = path.join(versionDir, 'docs', 'REQUIREMENTS.md');
   const reqFull = fs.existsSync(reqPath) ? fs.readFileSync(reqPath, 'utf8') : '';
   res.json({
-    ...p,
-    deploy: config.deploy || {},
-    version_state: state,
+    name: p.name,
+    status: p.status,
+    current_version: p.current_version,
+    updated_at: p.updated_at,
+    note: p.note,
+    deploy: sanitizeDeploy(config.deploy),
+    version_state: sanitizeState(state),
     tasks,
     last_error: lastError,
     requirements: reqFull,
