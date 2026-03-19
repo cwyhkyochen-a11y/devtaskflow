@@ -7,12 +7,6 @@
   这不是一句口号，是 DevTaskFlow 想认真推进的事情。
 </p>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/cwyhkyochen-a11y/devtaskflow/main/assets/cli-demo.png" alt="DevTaskFlow CLI Demo" width="800"/>
-  <br/>
-  <em>一句自然语言需求 → 自动拆任务 → 生成代码 → 看板追踪</em>
-</p>
-
 ---
 
 ## 看一眼就懂：它怎么工作
@@ -20,14 +14,21 @@
 你在终端里只需要做一件事：**说清楚你想做什么。**
 
 ```
-$ dtflow start --new-project --name crm-lite --idea "给销售团队用的客户管理工具"
+$ dtflow start --new-project --name ppt-maker --idea "帮我做一个PPT制作工具，我提需求，你拆解页面并生成PPT"
 ```
 
-然后 DevTaskFlow 自动帮你完成：
+DevTaskFlow 会自动分析你的需求，输出一份完整的分析报告：
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/cwyhkyochen-a11y/devtaskflow/main/assets/analysis-demo.png" alt="DevTaskFlow Analysis Phase" width="720"/>
+  <br/>
+  <em>输入需求 → 自动生成功能拆解、任务清单、技术方案、风险评估</em>
+</p>
+
+确认方案后，DevTaskFlow 自动帮你完成剩下的每一步：
 
 | 步骤 | 做什么 | 你需要做什么 |
 |------|--------|-------------|
-| 分析需求 | 把你的描述拆成具体任务 | 确认方案 |
 | 生成代码 | 调用 AI 写出完整项目代码 | 预览确认 |
 | 代码审查 | 自动检查代码质量 | 看结果 |
 | 自动修复 | 发现问题立刻修复再复审 | 无 |
@@ -43,9 +44,9 @@ $ dtflow start --new-project --name crm-lite --idea "给销售团队用的客户
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/cwyhkyochen-a11y/devtaskflow/main/assets/analysis-demo.png" alt="DevTaskFlow Analysis Phase" width="720"/>
+  <img src="https://raw.githubusercontent.com/cwyhkyochen-a11y/devtaskflow/main/assets/cli-demo.png" alt="DevTaskFlow CLI Demo" width="800"/>
   <br/>
-  <em>实际分析效果：输入需求 → 自动生成功能拆解、任务清单、技术方案、风险评估</em>
+  <em>多项目看板追踪：一句话需求 → 自动拆任务 → 生成代码 → 进度可视化</em>
 </p>
 
 ---
