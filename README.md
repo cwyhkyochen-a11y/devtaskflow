@@ -46,6 +46,12 @@ $ dtflow start --new-project --name crm-lite --idea "给销售团队用的客户
 提需求 → 分析 → 确认 → 生成代码 → 审查 → 修复 → 部署 → 封版 → 发布
 ```
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/cwyhkyochen-a11y/devtaskflow/main/assets/analysis-demo.png" alt="DevTaskFlow Analysis Phase" width="720"/>
+  <br/>
+  <em>实际分析效果：输入需求 → 自动生成功能拆解、任务清单、技术方案、风险评估</em>
+</p>
+
 ---
 
 ## 为什么做这个
