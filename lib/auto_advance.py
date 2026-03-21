@@ -349,7 +349,8 @@ def auto_advance(
                 print('\n👉 所有任务已通过审查！进入综合审查阶段...')
                 state.data['status'] = 'pending_final_review'
                 state.save()
-                print('   运行 dtflow start --final-review 执行综合审查')
+                print('   ⚠️  建议先 compact 一次，减少上下文累积。')
+                print('   然后运行 dtflow start --final-review 执行综合审查')
                 print('   或 dtflow start --deploy-skip-review 跳过审查直接部署')
         else:
             state.data['status'] = 'needs_fix'
@@ -375,13 +376,16 @@ def auto_advance(
             state.data['last_action'] = 'all_tasks_reviewed'
             state.save()
             print('\n🎉 所有任务都已通过审查！')
+            print('   ⚠️  建议先 compact 一次，减少上下文累积后再执行综合审查。')
             print('   进入上线前综合审查阶段：')
             print('   dtflow start --final-review    执行综合审查（推荐）')
             print('   dtflow start --deploy-skip-review  跳过审查直接部署')
             return {'status': 'pending_final_review', 'action': 'wait_final_review'}
 
     if status == 'pending_final_review':
-        print('\n🔍 等待综合审查，自动执行...')
+        print('\n⚠️  建议先 compact 一次，减少上下文累积导致的幻觉。')
+        print('   然后再执行综合审查。')
+        print('\n🔍 正在执行综合审查...')
         return _do_comprehensive_review(project_root, config, state)
 
     if status == 'ready_to_deploy':
