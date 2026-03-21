@@ -9,6 +9,7 @@ from result_parser import ResultParseError, parse_json_result
 WRITE_SYSTEM_PROMPT = load_prompt('write_system.md')
 REVIEW_SYSTEM_PROMPT = load_prompt('review_system.md')
 ANALYZE_SYSTEM_PROMPT = load_prompt('analyze_system.md')
+COMPREHENSIVE_REVIEW_SYSTEM_PROMPT = load_prompt('comprehensive_review_system.md')
 
 
 def parse_file_blocks(code_result: str):
@@ -51,6 +52,8 @@ class LocalLLMOrchestrator(BaseOrchestrator):
             return self._run_review(payload)
         if action == 'fix':
             return self._run_fix(payload)
+        if action == 'comprehensive_review':
+            return self._run_comprehensive_review(payload)
         raise RuntimeError(f'LocalLLMOrchestrator 暂不支持 action: {action}')
 
     def _parse_or_fallback(self, action: str, raw_text: str, fallback_builder):
@@ -190,5 +193,33 @@ class LocalLLMOrchestrator(BaseOrchestrator):
             }
 
         result = self._parse_or_fallback('fix', raw_text, fallback)
+        result.setdefault('raw_text', raw_text)
+        return result
+
+    def _run_comprehensive_review(self, payload: dict) -> dict:
+        llm = OpenAICompatibleLLM(self.config)
+        system_prompt = payload.get('system_prompt', COMPREHENSIVE_REVIEW_SYSTEM_PROMPT)
+        user_prompt = f"""请对以下项目进行全面审查：
+
+{payload['user_content']}
+"""
+        raw_text = llm.chat(system_prompt, user_prompt, max_tokens=16384, temperature=0.2)
+
+        def fallback(text: str):
+            passed = '不通过' not in text and '❌' not in text
+            return {
+                'status': 'success',
+                'action': 'comprehensive_review',
+                'summary': 'fallback: markdown review',
+                'passed': passed,
+                'score': 8 if passed else 5,
+                'issues': [],
+                'result_format': 'markdown_review',
+                'warnings': ['comprehensive_review 使用了 markdown fallback，建议升级为 JSON 输出'],
+                'errors': [],
+                'raw_text': text,
+            }
+
+        result = self._parse_or_fallback('comprehensive_review', raw_text, fallback)
         result.setdefault('raw_text', raw_text)
         return result

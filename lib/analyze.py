@@ -1,9 +1,22 @@
 from pathlib import Path
+import re
 
 from orchestrator import get_orchestrator
 from tasks import parse_tasks_from_plan, normalize_tasks
 from project import scan_project_files, get_current_version_dir
 from state import StateManager
+
+
+def _extract_design_system(plan_markdown: str) -> str | None:
+    """从 plan_markdown 中提取设计系统章节内容。"""
+    # 匹配 ## 设计系统 到下一个 ## 或文件末尾
+    pattern = r'(## 设计系统\s*\n)(.*?)(?=\n## |\Z)'
+    match = re.search(pattern, plan_markdown, re.DOTALL)
+    if match:
+        content = match.group(2).strip()
+        if content:
+            return f'# 设计系统规范\n\n{content}\n'
+    return None
 
 
 def run_analyze(project_root: Path, config: dict):
@@ -43,6 +56,13 @@ def run_analyze(project_root: Path, config: dict):
 
     plan_file = version_dir / 'docs' / 'DEV_PLAN.md'
     plan_file.write_text(plan_markdown, encoding='utf-8')
+
+    # 提取设计系统章节，写入 DESIGN_SYSTEM.md
+    design_system_content = _extract_design_system(plan_markdown)
+    if design_system_content:
+        ds_file = version_dir / 'docs' / 'DESIGN_SYSTEM.md'
+        ds_file.write_text(design_system_content, encoding='utf-8')
+        print(f'   设计系统规范已写入: {ds_file}')
 
     tasks = normalize_tasks(result.get('tasks', [])) if result.get('tasks') else parse_tasks_from_plan(plan_markdown)
     if not tasks:

@@ -4,6 +4,7 @@ from orchestrator import get_orchestrator
 from project import scan_project_files, get_current_version_dir
 from state import StateManager
 from contracts_review import build_review_payload
+from prompt_loader import load_prompt
 
 
 def parse_review_passed(review_result: str):
@@ -68,4 +69,202 @@ def run_review(project_root: Path, config: dict):
         'orchestration': state.data['last_orchestration'],
         'result_format': state.data['last_result_format'],
         'summary': state.data['last_summary'],
+    }
+
+
+def run_comprehensive_review(project_root: Path, config: dict):
+    """上线前综合审查：7 维度全面检查。"""
+    version_dir = get_current_version_dir(project_root, config)
+    if not version_dir:
+        raise RuntimeError('没有找到当前版本目录')
+
+    state = StateManager(version_dir)
+
+    # 加载综合审查 prompt
+    prompt_text = load_prompt('comprehensive_review_system')
+
+    # 收集所有源代码
+    code_files = scan_project_files(project_root, limit=30)
+    code_context = '\n\n'.join([
+        f"=== 文件: {f['path']} ===\n```\n{f['content'][:5000]}\n```" for f in code_files[:20]
+    ])
+
+    # 加载 DEV_PLAN.md
+    dev_plan_file = version_dir / 'docs' / 'DEV_PLAN.md'
+    dev_plan = dev_plan_file.read_text(encoding='utf-8') if dev_plan_file.exists() else '（无开发计划）'
+
+    # 加载 DESIGN_SYSTEM.md
+    ds_file = version_dir / 'docs' / 'DESIGN_SYSTEM.md'
+    ds_root = version_dir / 'DESIGN_SYSTEM.md'
+    if ds_file.exists():
+        design_system = ds_file.read_text(encoding='utf-8')
+    elif ds_root.exists():
+        design_system = ds_root.read_text(encoding='utf-8')
+    else:
+        design_system = '（无设计系统规范）'
+
+    # 加载 USER_GUIDE.md
+    ug_file = project_root / 'docs' / 'USER_GUIDE.md'
+    user_guide = ug_file.read_text(encoding='utf-8') if ug_file.exists() else '（无使用说明书）'
+
+    state.data['status'] = 'comprehensive_reviewing'
+    state.data['last_action'] = 'comprehensive_review'
+    state.data['last_error'] = None
+    state.save()
+
+    orchestrator = get_orchestrator(config)
+
+    # 构造审查 payload
+    user_content = f"""## 开发计划
+{dev_plan}
+
+## 设计系统规范
+{design_system}
+
+## 使用说明书
+{user_guide}
+
+## 项目源代码
+{code_context}
+"""
+
+    result = orchestrator.run('comprehensive_review', {
+        'system_prompt': prompt_text,
+        'user_content': user_content,
+        'project_root': str(project_root),
+        'version_dir': str(version_dir),
+    })
+
+    # 如果编排器不支持 comprehensive_review，回退到通用方式
+    if result.get('status') == 'not_implemented':
+        # 使用 review 编排器，替换 system prompt
+        result = orchestrator.run('review', {
+            'system_prompt': prompt_text,
+            'dev_plan': dev_plan,
+            'code': code_context,
+            'task_name': '上线前综合审查',
+            'task_description': '从代码质量、安全性、交互友好度、需求符合度、设计一致性、字段依赖、命名规范 7 个维度全面审查',
+            'project_root': str(project_root),
+            'version_dir': str(version_dir),
+        })
+
+    summary_text = result.get('raw_text', '') or result.get('summary', '')
+    if not summary_text:
+        raise RuntimeError('综合审查未返回结果')
+
+    # 写入审查报告
+    review_file = version_dir / 'docs' / 'COMPREHENSIVE_REVIEW.md'
+    review_file.write_text(summary_text, encoding='utf-8')
+
+    # 解析评分
+    passed = result.get('passed')
+    score = result.get('score')
+    issues = result.get('issues', [])
+
+    # 如果没有结构化结果，尝试从文本中提取分数
+    if passed is None or score is None:
+        import re
+        score_match = re.search(r'(?:总分|score|评分)[：:]\s*(\d+(?:\.\d+)?)', summary_text, re.IGNORECASE)
+        if score_match:
+            score = float(score_match.group(1))
+            passed = score >= 7
+        else:
+            passed = '不通过' not in summary_text and '❌' not in summary_text
+            score = 8 if passed else 5
+
+    state.data['status'] = 'comprehensive_review_passed' if passed else 'comprehensive_review_failed'
+    state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'local_llm') or 'local_llm'
+    state.data['last_result_format'] = result.get('result_format', 'unknown')
+    state.data['last_summary'] = summary_text[:500]
+    state.save()
+
+    return {
+        'review_file': str(review_file),
+        'passed': passed,
+        'score': score,
+        'issues': issues,
+        'summary': summary_text,
+        'orchestration': state.data['last_orchestration'],
+        'result_format': state.data['last_result_format'],
+    }
+
+
+def run_comprehensive_review(project_root: Path, config: dict):
+    """上线前综合审查：7 维度全面检查。"""
+    from prompt_loader import load_prompt
+
+    version_dir = get_current_version_dir(project_root, config)
+    if not version_dir:
+        raise RuntimeError('没有找到当前版本目录')
+
+    # 加载综合审查 prompt
+    system_prompt = load_prompt('comprehensive_review_system.md')
+
+    # 加载 DEV_PLAN.md
+    dev_plan_file = version_dir / 'docs' / 'DEV_PLAN.md'
+    dev_plan = ''
+    if dev_plan_file.exists():
+        dev_plan = dev_plan_file.read_text(encoding='utf-8')
+
+    # 加载 DESIGN_SYSTEM.md（如果存在）
+    ds_file = version_dir / 'docs' / 'DESIGN_SYSTEM.md'
+    design_system = ''
+    if ds_file.exists():
+        design_system = ds_file.read_text(encoding='utf-8')
+
+    # 扫描项目源代码
+    code_files = scan_project_files(project_root, limit=30)
+    code = '\n\n'.join([
+        f"=== 文件: {f['path']} ===\n```\n{f['content'][:4000]}\n```" for f in code_files[:15]
+    ])
+
+    state = StateManager(version_dir)
+    state.data['status'] = 'reviewing_comprehensive'
+    state.data['last_action'] = 'comprehensive_review'
+    state.data['last_error'] = None
+    state.save()
+
+    # 构造审查输入
+    review_input = f"【开发计划】\n{dev_plan[:3000]}\n\n"
+    if design_system:
+        review_input += f"【设计系统规范】\n{design_system[:2000]}\n\n"
+    review_input += f"【项目代码】\n{code}"
+
+    orchestrator = get_orchestrator(config)
+    result = orchestrator.run('comprehensive_review', {
+        'system_prompt': system_prompt,
+        'user_content': review_input,
+    })
+
+    review_text = result.get('raw_text', '') or result.get('summary', '')
+    if not review_text:
+        raise RuntimeError('综合审查未返回结果')
+
+    # 写入审查报告
+    review_file = version_dir / 'docs' / 'COMPREHENSIVE_REVIEW.md'
+    review_file.write_text(review_text, encoding='utf-8')
+
+    # 解析分数
+    score = result.get('score', 0)
+    if isinstance(score, str):
+        try:
+            score = float(score)
+        except (ValueError, TypeError):
+            score = 0
+
+    passed = score >= 7
+
+    state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'local_llm') or 'local_llm'
+    state.data['last_result_format'] = result.get('result_format', 'unknown')
+    state.data['last_summary'] = result.get('summary', '')
+    state.save()
+
+    return {
+        'review_file': str(review_file),
+        'passed': passed,
+        'score': score,
+        'issues': result.get('issues', []),
+        'summary': result.get('summary', ''),
+        'orchestration': state.data['last_orchestration'],
+        'result_format': state.data['last_result_format'],
     }

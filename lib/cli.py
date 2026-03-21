@@ -165,6 +165,14 @@ def cmd_start(args):
             return 0
         if args.deploy:
             return 0 if auto_advance(project_root, action='deploy')['status'] != 'failed' else 1
+        if args.final_review:
+            return 0 if auto_advance(project_root, action='final_review')['status'] != 'failed' else 1
+        if args.deploy_skip_review:
+            return 0 if auto_advance(project_root, action='deploy-skip-review')['status'] != 'failed' else 1
+        if args.final_review:
+            return 0 if auto_advance(project_root, action='final_review')['status'] != 'failed' else 1
+        if args.deploy_skip_review:
+            return 0 if auto_advance(project_root, action='deploy-skip-review')['status'] != 'failed' else 1
 
         # 默认：自动推进
         result = auto_advance(project_root, action='continue')
@@ -736,6 +744,8 @@ def main():
     p_start.add_argument('--run', action='store_true', help='本地预览')
     p_start.add_argument('--stop', action='store_true', help='停止本地预览')
     p_start.add_argument('--deploy', action='store_true', help='部署上线并封版')
+    p_start.add_argument('--final-review', action='store_true', help='执行上线前综合审查')
+    p_start.add_argument('--deploy-skip-review', action='store_true', help='跳过综合审查直接部署')
     p_start.set_defaults(func=cmd_start)
 
     p_board = subparsers.add_parser('board', help='查看所有项目状态')

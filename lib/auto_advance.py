@@ -151,6 +151,46 @@ def _do_deploy(project_root: Path, config: dict, state: StateManager) -> dict:
     return result
 
 
+def _do_comprehensive_review(project_root: Path, config: dict, state: StateManager) -> dict:
+    """执行上线前综合审查。"""
+    from review_flow import run_comprehensive_review
+    from human_summary import render_review_summary
+
+    print('\n🔍 正在执行上线前综合审查（7 维度）...')
+    print_llm_risk(estimate_llm_risk(project_root, config, 'review'))
+    result = run_comprehensive_review(project_root, config)
+
+    passed = result.get('passed', False)
+    score = result.get('score', '-')
+    issues = result.get('issues', [])
+
+    if passed:
+        print(f'\n✅ 综合审查通过！评分：{score}/10')
+        state.data['status'] = 'ready_to_deploy'
+    else:
+        print(f'\n⚠️ 综合审查未通过，评分：{score}/10')
+        critical = [i for i in issues if i.get('severity') == 'Critical']
+        important = [i for i in issues if i.get('severity') == 'Important']
+        if critical:
+            print(f'   Critical: {len(critical)} 个')
+            for issue in critical[:5]:
+                print(f'   - [{issue.get("category", "")}] {issue.get("path", "")}: {issue.get("message", "")}')
+        if important:
+            print(f'   Important: {len(important)} 个')
+            for issue in important[:3]:
+                print(f'   - [{issue.get("category", "")}] {issue.get("path", "")}: {issue.get("message", "")}')
+        state.data['status'] = 'needs_final_fix'
+
+    state.data['last_action'] = 'comprehensive_review'
+    state.save()
+
+    summary = result.get('summary', '')
+    if summary:
+        print(f'\n💡 审查报告：{result["review_file"]}')
+
+    return result
+
+
 def _do_seal(project_root: Path, config: dict, state: StateManager) -> dict:
     """执行 seal。"""
     from release_flow import run_seal
@@ -261,6 +301,15 @@ def auto_advance(
         seal_result = _do_seal(project_root, config, state)
         return seal_result
 
+    if action == 'final_review':
+        return _do_comprehensive_review(project_root, config, state)
+
+    if action == 'deploy-skip-review':
+        print('\n⏭️ 跳过综合审查，直接部署...')
+        result = _do_deploy(project_root, config, state)
+        seal_result = _do_seal(project_root, config, state)
+        return seal_result
+
     # action == 'continue': 按状态自动推进
     if status == 'created':
         return _do_analyze(project_root, config, state)
@@ -288,7 +337,20 @@ def auto_advance(
             state.data['status'] = 'review_passed'
             state.data['last_action'] = 'review'
             state.save()
-            print('\n👉 修复后审查通过！运行 dtflow start --deploy 部署，或 dtflow start 继续下一个任务。')
+            # 检查是否还有下一个 task
+            tasks = state.data.get('tasks', [])
+            current = state.data.get('current_task')
+            remaining = [t for t in tasks if t.get('id') != current and t.get('status') != 'done']
+            if remaining:
+                next_task = remaining[0]
+                print(f'\n👉 下一个任务：[{next_task["id"]}] {next_task["name"]}')
+                print('   运行 dtflow start 继续处理。')
+            else:
+                print('\n👉 所有任务已通过审查！进入综合审查阶段...')
+                state.data['status'] = 'pending_final_review'
+                state.save()
+                print('   运行 dtflow start --final-review 执行综合审查')
+                print('   或 dtflow start --deploy-skip-review 跳过审查直接部署')
         else:
             state.data['status'] = 'needs_fix'
             state.data['last_action'] = 'review'
@@ -308,10 +370,35 @@ def auto_advance(
             print(f'\n📋 进入下一个任务：[{next_task["id"]}] {next_task["name"]}')
             return _do_write_dry_run(project_root, config, state)
         else:
+            # 所有任务完成，进入综合审查阶段
+            state.data['status'] = 'pending_final_review'
+            state.data['last_action'] = 'all_tasks_reviewed'
+            state.save()
             print('\n🎉 所有任务都已通过审查！')
-            print('   要不要本地先看看效果？运行 dtflow start --run 启动预览。')
-            print('   确认没问题就运行 dtflow start --deploy 部署上线。')
-            return {'status': 'review_passed', 'action': 'all_done'}
+            print('   进入上线前综合审查阶段：')
+            print('   dtflow start --final-review    执行综合审查（推荐）')
+            print('   dtflow start --deploy-skip-review  跳过审查直接部署')
+            return {'status': 'pending_final_review', 'action': 'wait_final_review'}
+
+    if status == 'pending_final_review':
+        print('\n🔍 等待综合审查，自动执行...')
+        return _do_comprehensive_review(project_root, config, state)
+
+    if status == 'ready_to_deploy':
+        print('\n✅ 综合审查已通过，可以部署了！')
+        print('   运行 dtflow start --deploy 部署上线')
+        return {'status': 'ready_to_deploy', 'action': 'wait_deploy'}
+
+    if status == 'needs_final_fix':
+        print('\n🔧 综合审查发现问题，正在自动修复...')
+        fix_result = _do_fix(project_root, config, state)
+        print('\n🔍 修复完成，重新执行综合审查...')
+        review_result = _do_comprehensive_review(project_root, config, state)
+        if review_result.get('passed'):
+            print('\n👉 修复后综合审查通过！运行 dtflow start --deploy 部署。')
+        else:
+            print('\n👉 仍有问题，运行 dtflow start 再次修复。')
+        return review_result
 
     if status == 'sealed':
         print('\n📦 当前版本已封版。')
