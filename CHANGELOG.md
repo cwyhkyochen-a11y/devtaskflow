@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.7.0 (2026-03-23)
+
+**Feature: React Best Practices + Web UI Quality Guidelines**
+
+- 集成 Vercel React 最佳实践（64 条规则）到 write_system.md — 代码生成时自动遵循：并行请求、动态导入、大列表虚拟化、避免 transition:all、hydration 安全、交互状态、文案规范
+- 集成 Vercel Web Interface Guidelines 到 review_system.md — review 时自动检查 6 项 React 性能 + 10 项 UI 质量（无障碍、焦点状态、表单、动画、排版、内容处理、深色模式等）
+- comprehensive_review_system.md 从 7 维度扩展到 9 维度：新增 React 性能审查和 Web UI 质量审查
+- 文案规范：主动语态、Title Case、数字代替文字、按钮标签具体化、错误消息含修复步骤
+
 ## v0.6.0 (2026-03-21)
 
 **Feature: Design System + User Guide + Comprehensive Review**
