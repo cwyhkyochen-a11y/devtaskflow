@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import datetime
 import json
 import shutil
+import subprocess
 
 from project import get_current_version_dir
 from state import StateManager
@@ -167,6 +168,53 @@ def archive_source(project_root: Path, version_dir: Path):
     return src_dir, copied
 
 
+def git_commit_release(project_root: Path, version: str):
+    """封版时执行 git add + commit + tag"""
+    result = {'git_add': None, 'git_commit': None, 'git_tag': None, 'errors': []}
+
+    try:
+        # git add .
+        r = subprocess.run(
+            ['git', 'add', '.'],
+            cwd=str(project_root), capture_output=True, text=True, timeout=30
+        )
+        result['git_add'] = r.returncode == 0
+        if r.returncode != 0:
+            result['errors'].append(f'git add failed: {r.stderr.strip()}')
+
+        # git commit
+        commit_msg = f'release: {version} 封版'
+        r = subprocess.run(
+            ['git', 'commit', '-m', commit_msg],
+            cwd=str(project_root), capture_output=True, text=True, timeout=30
+        )
+        result['git_commit'] = r.returncode == 0
+        if r.returncode != 0:
+            # "nothing to commit" 不算错误
+            if 'nothing to commit' in r.stdout or 'nothing to commit' in r.stderr:
+                result['git_commit'] = True
+            else:
+                result['errors'].append(f'git commit failed: {r.stderr.strip()}')
+
+        # git tag
+        r = subprocess.run(
+            ['git', 'tag', version],
+            cwd=str(project_root), capture_output=True, text=True, timeout=30
+        )
+        result['git_tag'] = r.returncode == 0
+        if r.returncode != 0:
+            result['errors'].append(f'git tag failed: {r.stderr.strip()}')
+
+    except FileNotFoundError:
+        result['errors'].append('git 未安装')
+    except subprocess.TimeoutExpired:
+        result['errors'].append('git 命令超时')
+    except Exception as e:
+        result['errors'].append(f'git 操作异常: {str(e)}')
+
+    return result
+
+
 def run_deploy(project_root: Path, config: dict):
     version_dir = get_current_version_dir(project_root, config)
     if not version_dir:
@@ -217,6 +265,9 @@ def run_seal(project_root: Path, config: dict):
     }
     state.save()
 
+    # Git 封版操作
+    git_result = git_commit_release(project_root, version_dir.name)
+
     # 自动创建下一版本目录
     next_version, next_dir = create_next_version_dir(project_root, config, version_dir.name)
 
@@ -229,4 +280,5 @@ def run_seal(project_root: Path, config: dict):
         'src_items': src_count,
         'changelog_file': str(changelog_file),
         'next_version': next_version,
+        'git': git_result,
     }
