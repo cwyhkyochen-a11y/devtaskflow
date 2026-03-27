@@ -172,6 +172,12 @@ def git_commit_release(project_root: Path, version: str):
     """封版时执行 git add + commit + tag"""
     result = {'git_add': None, 'git_commit': None, 'git_tag': None, 'errors': []}
 
+    from git_utils import ensure_git_repo
+    repo_result = ensure_git_repo(project_root)
+    if repo_result.get('error'):
+        result['errors'].append(repo_result['error'])
+        return result
+
     try:
         # git add .
         r = subprocess.run(

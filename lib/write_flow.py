@@ -93,6 +93,11 @@ def run_write(project_root: Path, config: dict, task_id: str | None = None, dry_
     state.data['last_summary'] = result.get('summary', '')
     state.save()
 
+    # 自动 commit write 阶段的改动
+    git_result = auto_commit(project_root, f'feat: 实现代码')
+    if git_result.get('error'):
+        print(f"⚠️ Git commit 警告: {git_result['error']}")
+
     return {
         'task_id': task['id'],
         'task_name': task['name'],
@@ -102,4 +107,5 @@ def run_write(project_root: Path, config: dict, task_id: str | None = None, dry_
         'result_format': state.data['last_result_format'],
         'dry_run': dry_run,
         'summary': state.data['last_summary'],
+        'git': git_result,
     }

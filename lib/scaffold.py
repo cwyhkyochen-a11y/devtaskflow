@@ -33,6 +33,11 @@ def init_project_structure(project_root: Path, templates_dir: Path, project_name
     project_rel_path = str(project_root.resolve().relative_to(workspace_root.resolve())) if str(project_root.resolve()).startswith(str(workspace_root.resolve())) else str(project_root.resolve())
     board_item = register_project(workspace_root, final_name, project_rel_path)
 
+    # 自动初始化 git 仓库
+    git_result = ensure_git_repo(project_root)
+    if git_result.get('error'):
+        print(f"⚠️ Git 初始化警告: {git_result['error']}")
+
     return {
         'dtflow_dir': str(dtflow_dir),
         'versions_dir': str(versions_dir),
@@ -41,4 +46,5 @@ def init_project_structure(project_root: Path, templates_dir: Path, project_name
         'env_example': str(env_dst),
         'board_project': board_item['name'],
         'board_file': str(workspace_root / 'PROJECTS.md'),
+        'git': git_result,
     }

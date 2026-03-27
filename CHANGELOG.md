@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.10.0 (2026-03-27)
+
+**Feature: Git 自动化 — 每次新建/迭代项目自动使用 Git**
+
+- **`lib/git_utils.py`** — 新增 git 工具模块
+  - `check_git_installed()` — 检测 git 是否已安装，未安装时提示安装命令
+  - `is_git_repo()` — 检测目录是否已是 git 仓库
+  - `ensure_git_repo()` — 自动 `git init` + `git branch -M main` + 首次 commit
+  - `auto_commit(message)` — 自动 `git add .` + `git commit`（有变更才提交，无变更跳过）
+- **项目初始化自动 git** — `scaffold.py` 创建目录结构后自动 `ensure_git_repo`
+- **Write 阶段自动 commit** — `write_flow.py` 代码生成完成后自动提交
+- **Fix 阶段自动 commit** — `fix_flow.py` 修复完成后自动提交
+- **Seal 前自动确保 git 仓库** — `release_flow.py` 封版前检查/初始化 git
+- **Doctor 新增 git 检查** — `doctor.py` 诊断时检测 git 是否可用
+- **所有 git 操作 best-effort** — 失败只打印 ⚠️ 警告，不阻塞主流程
+
 ## v0.9.0 (2026-03-25)
 
 **Feature: 错误恢复 + 配置简化 + 封版自动化**

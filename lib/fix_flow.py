@@ -58,6 +58,11 @@ def run_fix(project_root: Path, config: dict):
     state.data['last_summary'] = result.get('summary', '')
     state.save()
 
+    # 自动 commit fix 阶段的改动
+    git_result = auto_commit(project_root, 'fix: 修复审查问题')
+    if git_result.get('error'):
+        print(f"⚠️ Git commit 警告: {git_result['error']}")
+
     return {
         'task_id': task['id'],
         'task_name': task['name'],
@@ -66,4 +71,5 @@ def run_fix(project_root: Path, config: dict):
         'orchestration': state.data['last_orchestration'],
         'result_format': state.data['last_result_format'],
         'summary': state.data['last_summary'],
+        'git': git_result,
     }
