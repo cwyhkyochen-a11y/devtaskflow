@@ -42,16 +42,7 @@ license: MIT-0
 
 ## 支持的模型
 
-DevTaskFlow 的代码生成质量高度依赖模型能力。经测试，以下模型能稳定完成完整开发任务：
-
-| 模型 | 说明 |
-|------|------|
-| Claude Opus 4.6 | 综合能力最强，推荐用于复杂开发任务 |
-| GPT 5.4 Pro | OpenAI 旗舰模型，大型项目首选 |
-| GPT 5.4 | 性价比高，适合中小型项目 |
-| 小米 Mimo V2 Pro | 国产模型，中文表现好 |
-
-**⚠️ 其他模型（如 GPT-4o、Claude Sonnet、DeepSeek 等）可能无法完成完整开发任务，产出质量不稳定。请从以上 4 个模型中选择。**
+推荐模型：Claude Opus 4.6（复杂项目首选）、GPT 5.4（性价比高）、小米 Mimo V2 Pro（中文好）。完整列表和说明见 README.md。
 
 ## 编排模式
 
@@ -101,13 +92,13 @@ DTFLOW_OPENCLAW_MODEL=claude-opus-4-6
 dtflow setup                                        # 配置 AI 服务（交互式）
 dtflow start --new-project --name NAME --idea "需求"  # 开始新项目
 dtflow start                                        # 继续上次进度
-dtflow start --confirm                              # 确认分析方案
-dtflow start --confirm-write                        # 确认预览后正式生成代码
+dtflow start --confirm                              # 确认分析方案，开始生成代码（先预览，用户确认后再写入）
+dtflow start --confirm-write                        # 在预览确认后，正式执行代码写入
 dtflow start --feedback "修改意见"                   # 提出修改
 dtflow start --run                                  # 本地预览
 dtflow start --deploy                               # 部署上线并封版
 dtflow start --final-review                         # 执行上线前综合审查（9 维度）
-dtflow start --deploy-skip-review                   # 跳过综合审查直接部署
+dtflow start --deploy-skip-review                   # 跳过综合审查直接部署（仅在用户明确要求跳过或时间紧迫时使用，建议默认走完整审查流程）
 dtflow board                                        # 所有项目状态（文字）
 dtflow board --serve                                # 启动可视化看板服务
 dtflow board-query --name PROJECT                   # 单个项目详情（文字）
@@ -125,7 +116,7 @@ dtflow advanced publish --target clawhub             # 发布到 ClawHub
 3. 向用户展示建议，问是否要补充
 4. 确认后自动 analyze → 展示任务列表
 5. `dtflow start --confirm` → 自动 write（先预览）→ review → fix → review
-6. 全部任务通过后 → **建议先 compact 一次**（减少上下文累积导致的幻觉） → 综合审查（`dtflow start --final-review`）— 9 维度全面检查
+6. 全部任务通过后 → **建议先 compact 一次**（减少上下文累积导致的幻觉）— 提醒主 agent 使用 `/compact` 或清理上下文后再执行综合审查 → 综合审查（`dtflow start --final-review`）— 9 维度全面检查
 7. 综合审查通过 → `dtflow start --run` 本地预览
 8. 用户确认没问题 → `dtflow start --deploy`
 
@@ -145,7 +136,7 @@ dtflow advanced publish --target clawhub             # 发布到 ClawHub
 
 ### 用户想看项目进展
 
-1. 检查看板服务是否在运行（默认 8765 端口）
+1. 检查看板服务是否在运行（`curl -s http://localhost:8765 > /dev/null && echo "running" || echo "stopped"`）
 2. 如果在运行 → 发链接
 3. 如果不在运行 → `dtflow board` 文字版
 
@@ -207,10 +198,22 @@ dtflow advanced publish --target clawhub             # 发布到 ClawHub
 ## 注意事项
 
 - `dtflow setup` 是交互式命令，在非交互环境不可用
-- 所有命令在项目根目录运行（含 `.dtflow/config.json` 的目录）
+- 所有命令在项目根目录运行，项目根目录是包含 `.dtflow/config.json` 的目录，可通过 `ls .dtflow/config.json` 确认
 - board 的 Node.js 应用需要 `npm install`（首次自动执行）
 - 看板服务默认端口 8765，**仅限本地使用，不要暴露到公网**
 - board API 已脱敏：不返回 host/user/path 等敏感部署信息
 - `run` 本地预览需要项目有可执行的启动命令（npm start / python app.py 等）
 - Docker 部署需要本地安装 Docker
 - `openclaw_subagent` 编排器需要在 `config.json` 或环境变量中配置独立的 LLM 连接信息
+
+### 常见问题处理
+
+- **dtflow 命令报错**: 检查是否在项目根目录（含 `.dtflow/config.json`）、模型 API Key 是否有效、余额是否充足
+- **部署失败**: 检查 Docker/SSH 连接、目标服务器权限、config.json 中的 deploy 配置
+- **审查反复不通过**: 检查是否有结构性问题（如框架选择不当），必要时让用户给出报错信息手动排查
+- **run 启动失败**: 检查项目启动命令（`npm start` / `python app.py`）、依赖是否安装完整
+
+### 边界场景
+
+- **用户想取消项目**: 归档项目（状态设为 archived）但不删除文件，保留以便后续恢复
+- **用户中途改需求**: 如果是小调整 → 用 `dtflow start --feedback "修改意见"` 在当前版本迭代；如果是大方向变更 → 建议新建版本（`dtflow advanced version --new`）

@@ -73,7 +73,7 @@ def run_review(project_root: Path, config: dict):
 
 
 def run_comprehensive_review(project_root: Path, config: dict):
-    """上线前综合审查：7 维度全面检查。"""
+    """上线前综合审查：9 维度全面检查。"""
     version_dir = get_current_version_dir(project_root, config)
     if not version_dir:
         raise RuntimeError('没有找到当前版本目录')
@@ -143,7 +143,7 @@ def run_comprehensive_review(project_root: Path, config: dict):
             'dev_plan': dev_plan,
             'code': code_context,
             'task_name': '上线前综合审查',
-            'task_description': '从代码质量、安全性、交互友好度、需求符合度、设计一致性、字段依赖、命名规范 7 个维度全面审查',
+            'task_description': '从代码质量、安全性、交互友好度、需求符合度、设计一致性、字段依赖、命名规范、React 性能、Web UI 质量 9 个维度全面审查',
             'project_root': str(project_root),
             'version_dir': str(version_dir),
         })
