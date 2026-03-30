@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from git_utils import auto_commit
 from orchestrator import get_orchestrator
 from project import scan_project_files, get_current_version_dir
 from state import StateManager

@@ -59,4 +59,7 @@ class OpenAICompatibleLLM:
         )
         response.raise_for_status()
         data = response.json()
-        return data['choices'][0]['message']['content']
+        choices = data.get('choices')
+        if not choices or not isinstance(choices, list):
+            raise LLMError(f'LLM 返回数据中 choices 为空或不存在: {data!r}')
+        return choices[0]['message']['content']

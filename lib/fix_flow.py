@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from git_utils import auto_commit
 from orchestrator import get_orchestrator
 from project import scan_project_files, get_current_version_dir
 from state import StateManager
@@ -13,7 +14,7 @@ def run_fix(project_root: Path, config: dict):
         raise RuntimeError('没有找到当前版本目录')
 
     state = StateManager(version_dir)
-    if state.data.get('status') != 'needs_fix':
+    if state.data.get('status') not in {'needs_fix', 'failed'}:
         raise RuntimeError(f"当前状态不允许 fix: {state.data.get('status')}")
 
     task_id = state.data.get('current_task')

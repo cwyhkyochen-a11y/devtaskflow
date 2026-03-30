@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import List, Dict, Any
 
+from ux import build_next_step_hint
+
 
 def render_analyze_summary(result: dict) -> str:
     tasks = result.get('tasks', []) or []
@@ -48,14 +50,5 @@ def render_fix_summary(result: dict) -> str:
 
 
 def render_next_step(state: Dict[str, Any]) -> str:
-    status = state.get('status')
-    mapping = {
-        'created': '运行 dtflow start --idea "你的需求" 来开始',
-        'pending_confirm': '运行 dtflow start --confirm 确认方案',
-        'confirmed': '运行 dtflow start 继续（先预览再生成）',
-        'written': '正在审查中...',
-        'needs_fix': '运行 dtflow start 自动修复',
-        'review_passed': '运行 dtflow start --deploy 部署上线',
-        'failed': '运行 dtflow advanced status 查看错误详情',
-    }
-    return mapping.get(status, '运行 dtflow start 继续')
+    """委托给 ux.build_next_step_hint，避免维护两份映射。"""
+    return build_next_step_hint(state)

@@ -35,4 +35,7 @@ def parse_tasks_from_plan(dev_plan: str):
             'output_files': match.group(6).strip() if match.group(6) else None,
             'status': 'pending',
         })
-    return normalize_tasks(tasks)
+    normalized = normalize_tasks(tasks)
+    if not normalized:
+        print('⚠️ parse_tasks_from_plan: 未解析到任何任务，请检查 plan 格式是否包含标准表格。')
+    return normalized

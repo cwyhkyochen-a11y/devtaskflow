@@ -170,7 +170,7 @@ def run_comprehensive_review(project_root: Path, config: dict):
             passed = score >= 7
         else:
             passed = '不通过' not in summary_text and '❌' not in summary_text
-            score = 8 if passed else 5
+            score = None  # 无法解析评分时返回 None，而非伪造默认值
 
     state.data['status'] = 'comprehensive_review_passed' if passed else 'comprehensive_review_failed'
     state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'local_llm') or 'local_llm'

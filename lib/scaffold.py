@@ -1,6 +1,7 @@
 import shutil
 from pathlib import Path
 
+from git_utils import ensure_git_repo
 from project_board import find_workspace_root, register_project
 
 

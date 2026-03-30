@@ -1,5 +1,37 @@
 # Changelog
 
+## v1.1.0 (2026-03-30) 🔒
+
+**修复: 全面代码审查 — 安全加固 + Bug 修复 + 架构改进**
+
+- **Critical Bug 修复（3 项）**
+  - `scaffold.py`: 补充缺失的 `from git_utils import ensure_git_repo` import，修复运行时 NameError
+  - `write_flow.py`: 补充缺失的 `from git_utils import auto_commit` import，修复 write 完成后崩溃
+  - `fix_flow.py`: 补充缺失的 `from git_utils import auto_commit` import，扩展状态检查支持 `failed` 状态
+- **安全加固（6 项）**
+  - `serve.py`: HTTPServer 默认绑定 `127.0.0.1`，新增 host 参数可配置，防止公网暴露
+  - `board/server.js`: Express 默认绑定 `127.0.0.1`，支持 `DTFLOW_BOARD_HOST` 环境变量覆盖
+  - `llm.py`: 新增 `__repr__` 方法对 API Key 脱敏显示；`chat()` 添加 choices 防御性检查
+  - `prompt_loader.py`: `load_prompt()` 添加路径遍历防护，防止读取任意文件
+  - `setup_flow.py`: `.env` 文件写入后执行 `chmod 0600`，防止多用户系统泄露 API Key
+  - `deploy_adapter.py`: SSH 参数正则校验（host/user/path），拒绝 shell 元字符注入
+- **架构改进（7 项）**
+  - `board/server.js`: 数据源改为优先读取 PROJECTS.md JSON 注释，解决 Python/Node 数据不一致
+  - `auto_advance.py`: fix→review 循环添加最大 3 轮限制，超限后提示手动介入
+  - `review_flow.py`: 评分解析不再伪造默认分数，无法解析时返回 None
+  - `state.py`: save() 改为原子写入（先写 tmp 再 os.replace），防止进程崩溃导致状态文件损坏
+  - `orchestrator.py`: 顶层 import 改为 lazy import，支持降级
+  - `run_flow.py`: 启动命令改用 `shlex.split()`，修复文件描述符泄漏
+  - `deploy_adapter.py`: `run_shell/run_proc` 新增 timeout 参数（默认 300 秒）
+- **代码质量改进（7 项）**
+  - `cli.py`: 修复 `cmd_adv_recover` 缺少 f 前缀的 bug，删除 `cmd_start` 重复代码块
+  - `dashboard.py`: bare except 改为保留异常信息
+  - `error_handling.py`: 静默吞异常改为打印警告
+  - `human_summary.py`: 委托 `ux.py` 消除重复代码
+  - `result_schema.py`: `validate_analyze_result` 添加 deepcopy 防止副作用
+  - `requirement_guidance.py`: 答案匹配添加 strip 容错
+  - `project.py`: 版本目录排序改为优先按语义版本号
+
 ## v1.0.0 (2026-03-28) 🎉
 
 **里程碑: DevTaskFlow 1.0 正式版 — 架构回归 OpenClaw 原生能力**

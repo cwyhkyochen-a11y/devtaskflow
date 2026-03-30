@@ -20,7 +20,8 @@ def mark_command_failed(project_root: Path, action: str, error: Exception):
         state.data['last_action'] = action
         state.data['last_error'] = str(error)
         state.save()
-    except Exception:
+    except Exception as e:
+        print(f'⚠️ mark_command_failed 写入状态失败: {type(e).__name__}: {e}')
         return
 
 

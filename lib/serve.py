@@ -11,13 +11,13 @@ class QuietHandler(SimpleHTTPRequestHandler):
         return
 
 
-def run_serve(start: Path | None = None, port: int = 8765):
+def run_serve(start: Path | None = None, port: int = 8765, host: str = '127.0.0.1'):
     base = (start or Path.cwd()).resolve()
     result = build_dashboard(base)
     handler = lambda *args, **kwargs: QuietHandler(*args, directory=str(base), **kwargs)
-    server = ThreadingHTTPServer(('0.0.0.0', port), handler)
+    server = ThreadingHTTPServer((host, port), handler)
     return server, {
-        'url': f'http://127.0.0.1:{port}/dtflow-dashboard.html',
+        'url': f'http://{host}:{port}/dtflow-dashboard.html',
         'dashboard_path': result['dashboard_path'],
         'board_path': result['board_path'],
     }

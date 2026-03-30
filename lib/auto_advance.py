@@ -110,12 +110,13 @@ def _do_review(project_root: Path, config: dict, state: StateManager) -> dict:
     result = _call()
 
     passed = result.get('passed', False)
-    score = result.get('score', '-')
+    score = result.get('score')
+    score_display = f'{score}' if score is not None else '未解析'
     if passed:
-        print(f'\n✅ 审查通过！评分：{score}')
+        print(f'\n✅ 审查通过！评分：{score_display}')
     else:
         issues = result.get('issues', [])
-        print(f'\n⚠️ 审查发现问题，评分：{score}')
+        print(f'\n⚠️ 审查发现问题，评分：{score_display}')
         for issue in issues[:5]:
             sev = issue.get('severity', '')
             msg = issue.get('message', '')
@@ -179,14 +180,15 @@ def _do_comprehensive_review(project_root: Path, config: dict, state: StateManag
     result = run_comprehensive_review(project_root, config)
 
     passed = result.get('passed', False)
-    score = result.get('score', '-')
+    score = result.get('score')
+    score_display = f'{score}' if score is not None else '未解析'
     issues = result.get('issues', [])
 
     if passed:
-        print(f'\n✅ 综合审查通过！评分：{score}/10')
+        print(f'\n✅ 综合审查通过！评分：{score_display}/10')
         state.data['status'] = 'ready_to_deploy'
     else:
-        print(f'\n⚠️ 综合审查未通过，评分：{score}/10')
+        print(f'\n⚠️ 综合审查未通过，评分：{score_display}/10')
         critical = [i for i in issues if i.get('severity') == 'Critical']
         important = [i for i in issues if i.get('severity') == 'Important']
         if critical:
@@ -255,6 +257,7 @@ def auto_advance(
         state.data['architecture_confirmed'] = True
         state.data['status'] = 'confirmed'
         state.data['last_action'] = 'confirm'
+        state.data['fix_review_count'] = 0  # 重置 fix→review 计数
         tasks = state.data.get('tasks', [])
         state.data['current_task'] = tasks[0]['id'] if tasks else None
         state.save()
@@ -349,10 +352,24 @@ def auto_advance(
         return _do_review(project_root, config, state)
 
     if status in ('needs_fix', 'failed'):
-        # 自动 fix → review
+        # 自动 fix → review，最多 3 轮
+        fix_review_count = state.data.get('fix_review_count', 0)
+        max_fix_review = 3
+        if fix_review_count >= max_fix_review:
+            state.data['status'] = 'fix_exhausted'
+            state.save()
+            print(f'\n❌ fix→review 已重试 {fix_review_count} 轮（上限 {max_fix_review} 轮），仍无法通过审查。')
+            print('   请手动检查代码并修复问题后，运行 dtflow advanced recover 重置状态。')
+            return {'status': 'fix_exhausted', 'action': 'manual_intervention', 'retry_count': fix_review_count}
+
+        state.data['fix_review_count'] = fix_review_count + 1
+        state.save()
+        print(f'\n🔄 fix→review 第 {fix_review_count + 1}/{max_fix_review} 轮...')
+
         fix_result = _do_fix(project_root, config, state)
         review_result = _do_review(project_root, config, state)
         if review_result.get('passed'):
+            state.data['fix_review_count'] = 0  # 通过后重置计数
             state.data['status'] = 'review_passed'
             state.data['last_action'] = 'review'
             state.save()
@@ -375,7 +392,11 @@ def auto_advance(
             state.data['status'] = 'needs_fix'
             state.data['last_action'] = 'review'
             state.save()
-            print('\n👉 仍有问题，运行 dtflow start 再次修复。')
+            remaining_tries = max_fix_review - fix_review_count - 1
+            if remaining_tries > 0:
+                print(f'\n👉 仍有问题，剩余 {remaining_tries} 轮修复机会，运行 dtflow start 继续修复。')
+            else:
+                print(f'\n👉 本轮修复后仍有问题，下一轮将放弃自动修复，请手动介入。')
         return review_result
 
     if status == 'review_passed':
