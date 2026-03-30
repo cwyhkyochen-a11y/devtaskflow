@@ -12,7 +12,13 @@ def get_current_version_dir(project_root: Path, config: dict):
     version_dirs = [d for d in versions_dir.iterdir() if d.is_dir() and d.name.startswith('v')]
     if not version_dirs:
         return None
-    return max(version_dirs, key=lambda d: d.stat().st_mtime)
+    # 优先按语义版本号排序取最大，st_mtime 仅作 fallback
+    def _sort_key(d: Path):
+        try:
+            return (0, parse_version(d.name))
+        except RuntimeError:
+            return (1, d.stat().st_mtime)
+    return max(version_dirs, key=_sort_key)
 
 
 def scan_project_files(project_root: Path, limit: int = 20):

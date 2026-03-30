@@ -23,8 +23,8 @@ def run_shell(command: str, cwd: Path):
     }
 
 
-def run_proc(command: list[str], cwd: Path):
-    result = subprocess.run(command, cwd=str(cwd), capture_output=True, text=True)
+def run_proc(command: list[str], cwd: Path, timeout: int = 300):
+    result = subprocess.run(command, cwd=str(cwd), capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or '命令执行失败')
     return result.stdout.strip()
@@ -57,6 +57,16 @@ class ShellDeployAdapter(BaseDeployAdapter):
 
 class SSHShellDeployAdapter(BaseDeployAdapter):
     name = 'ssh_shell'
+
+    @staticmethod
+    def _validate_ssh_config(host: str, user: str, path: str):
+        """基本格式校验，防止 shell 元字符注入。"""
+        if not re.fullmatch(r'[A-Za-z0-9._-]+', host):
+            raise RuntimeError(f'ssh_shell host 格式不合法: {host!r}（仅允许域名/IP 字符）')
+        if not re.fullmatch(r'[A-Za-z0-9._-]+', user):
+            raise RuntimeError(f'ssh_shell user 格式不合法: {user!r}（仅允许字母数字._-）')
+        if not re.fullmatch(r'[/A-Za-z0-9._-]+', path):
+            raise RuntimeError(f'ssh_shell path 格式不合法: {path!r}（不允许 shell 元字符）')
 
     def deploy(self, project_root: Path, config: dict) -> dict:
         deploy_cfg = config.get('deploy', {})

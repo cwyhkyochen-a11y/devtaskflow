@@ -109,7 +109,7 @@ def answers_to_requirement(answers: dict) -> str:
     }
 
     parts = []
-    user_type = answers.get('type', '')
+    user_type = (answers.get('type', '') or '').strip()
     if user_type in type_map:
         parts.append(f'我要做一个{type_map[user_type]}')
     elif user_type:
@@ -117,25 +117,25 @@ def answers_to_requirement(answers: dict) -> str:
     else:
         parts.append('我要做一个工具')
 
-    users = answers.get('users', '')
+    users = (answers.get('users', '') or '').strip()
     if users in users_map:
         parts.append(users_map[users])
 
-    features = answers.get('core_features', '')
+    features = (answers.get('core_features', '') or '').strip()
     if features:
         parts.append(f'核心功能是：{features}')
 
-    auth = answers.get('auth', '')
+    auth = (answers.get('auth', '') or '').strip()
     if auth == '需要':
         parts.append('需要用户登录注册')
     elif auth == '不需要':
         parts.append('不需要登录')
 
-    tech = answers.get('tech', '')
+    tech = (answers.get('tech', '') or '').strip()
     if tech in tech_map and tech_map[tech]:
         parts.append(tech_map[tech])
 
-    extras = answers.get('extras', '')
+    extras = (answers.get('extras', '') or '').strip()
     if extras:
         parts.append(f'补充：{extras}')
 

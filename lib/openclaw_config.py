@@ -10,7 +10,8 @@ def _load_openclaw_config() -> dict:
         return {}
     try:
         return json.loads(config_path.read_text(encoding='utf-8'))
-    except Exception:
+    except Exception as e:
+        print(f'⚠️ openclaw_config: 读取配置文件失败: {e}')
         return {}
 
 
@@ -23,7 +24,8 @@ def _read_api_key(provider: str) -> str:
         if cred_file.exists():
             try:
                 return cred_file.read_text(encoding='utf-8').strip()
-            except Exception:
+            except Exception as e:
+                print(f'⚠️ 读取凭据文件 {cred_file} 失败: {e}')
                 continue
     return ''
 

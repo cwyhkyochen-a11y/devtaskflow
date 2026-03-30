@@ -1,6 +1,6 @@
 ---
 name: DevTaskFlow
-version: 1.0.0
+version: 1.1.0
 description: 用自然语言发起开发任务，AI 驱动的开发流水线。Describe your idea, get working software. 适合产品、运营、业务人员从 0 搭建项目。
 metadata:
   {

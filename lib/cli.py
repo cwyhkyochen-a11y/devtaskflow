@@ -809,7 +809,7 @@ def cmd_adv_recover(args):
     if status in ('pending_confirm', 'confirmed', 'writing', 'written'):
         plan_file = version_dir / 'docs' / 'PLAN.md'
         if not plan_file.exists():
-            print('⚠️ 状态为「{status}」但方案文件不存在')
+            print(f'⚠️ 状态为「{status}」但方案文件不存在')
             print('   → 重置状态为 created，需要重新分析')
             state.data['status'] = 'created'
             state.data['architecture_confirmed'] = False

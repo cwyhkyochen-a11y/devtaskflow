@@ -148,8 +148,8 @@ def enrich_projects(projects: list[dict], start: Path | None = None):
                 state = StateManager(version_dir)
                 row['pipeline_status'] = state.data.get('status')
                 row['publish'] = state.data.get('publish')
-        except Exception:
-            pass
+        except Exception as e:
+            row['_error'] = str(e)
         enriched.append(row)
     return enriched
 

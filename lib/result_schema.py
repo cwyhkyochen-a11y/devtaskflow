@@ -58,6 +58,7 @@ def _validate_common(data: dict[str, Any], expected_action: str):
 
 
 def validate_analyze_result(data: dict[str, Any]) -> dict[str, Any]:
+    data = copy.deepcopy(data)
     _require_keys(data, ANALYZE_REQUIRED_KEYS)
     _validate_common(data, 'analyze')
     tasks = data.get('tasks')

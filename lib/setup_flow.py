@@ -121,6 +121,7 @@ def _write_env_file(base_url: str, api_key: str, model: str, env_path: Path) -> 
         f'DTFLOW_LLM_MODEL={model}\n'
     )
     env_path.write_text(content, encoding='utf-8')
+    os.chmod(env_path, 0o600)
     # 同时设置到当前进程环境，方便后续命令直接使用
     os.environ['DTFLOW_LLM_BASE_URL'] = base_url
     os.environ['DTFLOW_LLM_API_KEY'] = api_key

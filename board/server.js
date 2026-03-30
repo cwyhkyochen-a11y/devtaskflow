@@ -9,6 +9,26 @@ const WORKSPACE = process.env.DTFLOW_WORKSPACE || process.cwd();
 const PORT = process.env.DTFLOW_BOARD_PORT || 8765;
 
 function loadProjects() {
+  // 优先从 PROJECTS.md 注释中的 JSON 加载（与 Python 端一致）
+  const mdFile = path.join(WORKSPACE, 'PROJECTS.md');
+  if (fs.existsSync(mdFile)) {
+    try {
+      const md = fs.readFileSync(mdFile, 'utf8');
+      const marker = '<!-- DTFLOW_PROJECTS_JSON\n';
+      const endMarker = '\nDTFLOW_PROJECTS_JSON_END -->';
+      const start = md.indexOf(marker);
+      if (start !== -1) {
+        const end = md.indexOf(endMarker, start);
+        if (end !== -1) {
+          const jsonStr = md.slice(start + marker.length, end);
+          return JSON.parse(jsonStr);
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ 解析 PROJECTS.md 失败，尝试 fallback 到 PROJECTS.json:', e.message);
+    }
+  }
+  // fallback: 读取 PROJECTS.json
   const projFile = path.join(WORKSPACE, 'PROJECTS.json');
   if (!fs.existsSync(projFile)) return [];
   return JSON.parse(fs.readFileSync(projFile, 'utf8'));
@@ -107,6 +127,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`DevTaskFlow board listening on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`DevTaskFlow board listening on ${HOST}:${PORT}`);
 });

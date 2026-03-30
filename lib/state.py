@@ -32,11 +32,14 @@ class StateManager:
         self.save()
 
     def save(self):
+        import os
         self.data['updated_at'] = datetime.now().isoformat()
-        self.state_file.write_text(
+        tmp_file = self.state_file.with_suffix('.json.tmp')
+        tmp_file.write_text(
             json.dumps(self.data, ensure_ascii=False, indent=2),
             encoding='utf-8'
         )
+        os.replace(str(tmp_file), str(self.state_file))
 
     def update_status(self, status: str):
         self.data['status'] = status
