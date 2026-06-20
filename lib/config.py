@@ -29,7 +29,6 @@ def validate_config(config: dict):
     required = [
         ('project', dict),
         ('pipeline', dict),
-        ('llm', dict),
         ('adapters', dict),
     ]
     for key, typ in required:

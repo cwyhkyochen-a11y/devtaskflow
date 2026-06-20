@@ -16,7 +16,6 @@ from publish_flow import run_publish
 from version_flow import create_version
 from dashboard import build_dashboard
 from serve import run_serve
-from llm_risk import estimate_llm_risk, print_llm_risk
 from workspace_layout import resolve_project_init_path, guess_workspace_root_for_init
 from project_board import find_workspace_root, load_projects, DEFAULT_PROJECTS_FILE
 from error_handling import mark_command_failed
@@ -104,7 +103,7 @@ def cmd_start(args):
         validate_config(config)
     except ConfigError as e:
         print(f'\n⚠️ 配置有问题：{e}')
-        print('   建议先运行 dtflow setup 配置 AI 服务。')
+        print('   建议先运行 dtflow setup 检查 Codex 项目环境。')
         return 1
 
     # 检查是否有进行中的版本
@@ -478,7 +477,6 @@ def cmd_adv_analyze(args):
     try:
         config = load_config(root)
         validate_config(config)
-        print_llm_risk(estimate_llm_risk(root, config, 'analyze'))
         result = run_analyze(root, config)
     except Exception as e:
         mark_command_failed(root, 'analyze', e)
@@ -528,7 +526,6 @@ def cmd_adv_write(args):
     try:
         config = load_config(root)
         validate_config(config)
-        print_llm_risk(estimate_llm_risk(root, config, 'write'))
         result = run_write(root, config, task_id=args.task_id, dry_run=args.dry_run)
     except Exception as e:
         mark_command_failed(root, 'write', e)
@@ -551,7 +548,6 @@ def cmd_adv_review(args):
     try:
         config = load_config(root)
         validate_config(config)
-        print_llm_risk(estimate_llm_risk(root, config, 'review'))
         result = run_review(root, config)
     except Exception as e:
         mark_command_failed(root, 'review', e)
@@ -571,7 +567,6 @@ def cmd_adv_fix(args):
     try:
         config = load_config(root)
         validate_config(config)
-        print_llm_risk(estimate_llm_risk(root, config, 'fix'))
         result = run_fix(root, config)
     except Exception as e:
         mark_command_failed(root, 'fix', e)
@@ -902,7 +897,7 @@ def main():
 
     # --- 核心命令 ---
 
-    p_setup = subparsers.add_parser('setup', help='配置 AI 服务（首次使用必做）')
+    p_setup = subparsers.add_parser('setup', help='检查 Codex 项目环境')
     p_setup.add_argument('--mode', choices=['auto', 'guided', 'advanced'],
                           help='配置模式：auto=自动检测, guided=引导式, advanced=高级')
     p_setup.set_defaults(func=cmd_setup)

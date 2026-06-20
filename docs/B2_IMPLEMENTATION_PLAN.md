@@ -10,14 +10,14 @@
 - [x] 新 skill 目录建立
 - [x] CLI 入口建立：dtflow
 - [x] .dtflow 配置目录设计
-- [x] 环境变量模板
+- [x] Codex 版环境变量模板（仅保留项目运行/部署配置）
 - [x] doctor 命令
 - [x] status 命令
 - [x] init-project 脚手架
 
 ## Phase 2 ✅ 核心流水线
 
-- [x] LLM adapter 抽象（OpenAI compatible）
+- [x] Codex-managed 阶段交接机制
 - [x] analyze / confirm / revise
 - [x] 任务计划解析器（JSON + markdown fallback）
 - [x] 状态推进机制完善（auto_advance）
@@ -35,7 +35,7 @@
 - [x] deploy adapters（shell / ssh_shell / docker）
 - [x] archive adapter（本地归档）
 - [x] GitHub publish adapter（tag + release）
-- [x] Codex orchestration adapter（v1.2.0 迁移）
+- [x] Codex-managed skill 工作流（v1.2.0 迁移）
 - [x] GitHub publish adapter（v0.8.0 新增）
 
 ## Phase 5 ✅ 文档与示例

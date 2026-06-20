@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from project_queries import parse_version
+
 
 def get_versions_dir(project_root: Path, config: dict):
     return project_root / config['pipeline'].get('versions_dir', 'versions')

@@ -39,7 +39,8 @@ def create_version(project_root: Path, config: dict, version: str, mode: str, re
             content = '# REQUIREMENTS\n\n' + content + '\n'
         req_file.write_text(content, encoding='utf-8')
 
-    workspace_root = find_workspace_root(project_root)
+    configured_workspace = config.get('project', {}).get('workspace_root')
+    workspace_root = Path(configured_workspace).resolve() if configured_workspace else find_workspace_root(project_root)
     project_name = config['project']['name']
     update_project(
         workspace_root,

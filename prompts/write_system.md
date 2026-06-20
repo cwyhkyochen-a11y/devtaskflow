@@ -153,7 +153,7 @@
 - 主动语态："Install the CLI" 不是 "The CLI will be installed"
 - 标题和按钮用 Title Case（Chicago 风格）
 - 数量用数字："8 deployments" 不是 "eight"
-- 按钮标签具体化："Save API Key" 不是 "Continue"
+- 按钮标签具体化："Save Settings" 不是 "Continue"
 - 错误消息包含修复步骤，不只是描述问题
 - 第二人称，避免第一人称
 - 空间受限时用 & 代替 and

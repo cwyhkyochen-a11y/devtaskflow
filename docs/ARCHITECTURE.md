@@ -11,63 +11,51 @@
 ## 目标架构
 
 ```text
+Codex session
+  ├── reads $devtaskflow / SKILL.md
+  ├── analyzes requirements
+  ├── edits code directly
+  ├── reviews and fixes implementation
+  └── updates DevTaskFlow docs/state
+
 CLI (dtflow)
-  ├── config layer
-  ├── project-board layer
-  ├── state layer
-  ├── scaffold layer
-  ├── doctor layer
-  ├── pipeline core
-  │    ├── analyze
-  │    ├── write
-  │    ├── review
-  │    ├── fix
-  │    ├── deploy
-  │    └── seal
-  ├── orchestrator
-  │    ├── local_llm
-  │    └── codex_subagent
-  └── adapters
-       ├── llm adapter
-       ├── deploy adapter
-       ├── archive adapter
-       └── codex adapter
+  ├── project scaffold
+  ├── durable state and version docs
+  ├── board/status queries
+  ├── CODEX_NEXT_ACTION.md handoff notes
+  ├── local preview helpers
+  └── deploy / archive / release helpers
 ```
 
-## 当前实现状态（v0.1）
+## 当前实现状态
 
 当前已经落地：
 
-- `orchestrator.py` 作为统一编排入口
-- `orchestrators/local_llm.py` 承接 `analyze / write / review / fix`
-- `orchestrators/codex_subagent.py` 作为 Codex 子任务统一接口适配器
-- `analyze.py / write_flow.py / review_flow.py / fix_flow.py` 已切换为通过 orchestrator 调度
-- prompts 已外置到 `prompts/`
-- 新增 `codex_bridge.py`，负责构造 Codex 子任务请求描述
-- 新增 `result_schema.py / result_parser.py`，提供 JSON-first 协议基础层
+- `SKILL.md` 作为 Codex 运行入口和阶段规则
+- `.dtflow/config.json` 默认使用 `codex_managed`
+- `dtflow start` 在需要智能工作的阶段写入 `CODEX_NEXT_ACTION.md`，由当前 Codex 会话继续执行
+- `analyze / write / review / fix` 不再默认调用外部模型
 - `write_flow.py` 已增加路径安全校验，防止写出项目目录
 - `status` 可查看 `last_action / last_result_format / last_summary / last_error`
-- `write --dry-run` 已支持预览文件写入计划
 - 状态机已包含部分中间态：`analyzing / writing / reviewing / fixing / deploying / sealed`
 
 当前尚未完成：
 
-- Codex 子任务真实调度接线
-- 结果渲染层与协议层进一步分离
-- FILE block / Markdown fallback 继续退场
-- 更完整的 failed / resume / async 恢复体系
+- 更完整的人工/模型协作状态恢复提示
+- 更完整的版本封存、补丁和 erratum 流程
+- 看板对 `CODEX_NEXT_ACTION.md` 的可视化展示
 
 ## 设计原则
 
-### 1. Core / Adapter / Orchestrator 分离
-- 核心流程不直接绑定 Codex 运行时内部 API
-- Codex 子任务协作作为可选 orchestrator / adapter 存在
-- 本地 LLM 模式与 Codex 子任务模式可切换
+### 1. Codex-first
+- Codex 会话负责推理、代码编辑、审查和修复
+- DevTaskFlow 只记录项目状态、文档、版本和发布纪律
+- 不要求用户配置模型凭据、外部模型地址或本机凭据
 
 ### 2. 安全优先
-- API Key 禁止硬编码
-- 所有敏感信息走环境变量或本地配置
+- 不读取 Codex 账号、session 文件、隐藏凭据或 keychain
 - 文件写入必须限制在 project_root 内
+- 发布、封版、commit、tag、push 前必须得到用户明确授权
 
 ### 3. 项目先于版本
 - 每次开发任务必须先绑定到一个 project
@@ -85,7 +73,6 @@ CLI (dtflow)
 ## 下一步演进
 
 ### v0.2
-- Codex 子任务真实调度
 - deploy / seal / publish 进一步 adapter 化
 - renderer 层独立
 - 更强的 async / resume 能力

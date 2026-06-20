@@ -69,10 +69,6 @@ _USER_FRIENDLY_ERRORS = {
         'message': '操作过程中出了点问题。',
         'suggestion': '建议运行 dtflow advanced status 查看当前状态，或 dtflow advanced recover 自动检测修复。',
     },
-    'LLMError': {
-        'message': 'AI 服务连接失败。',
-        'suggestion': '请检查网络或运行 dtflow setup 重新配置。',
-    },
     'FileNotFoundError': {
         'message': '找不到需要的文件。',
         'suggestion': '确认当前目录是 DevTaskFlow 项目。运行 dtflow advanced doctor 检查环境。',
@@ -87,11 +83,11 @@ _USER_FRIENDLY_ERRORS = {
     },
     'TimeoutError': {
         'message': '网络连接超时。',
-        'suggestion': '请检查网络后重试。如果频繁超时，可能是 AI 服务繁忙，请稍后再试。',
+        'suggestion': '请检查网络后重试。如果频繁超时，请稍后再试。',
     },
     'JSONDecodeError': {
         'message': 'AI 返回的数据格式异常。',
-        'suggestion': '正在自动重试... 如果频繁出现，建议运行 dtflow setup 检查 AI 服务配置。',
+        'suggestion': '请检查输入文件或上一步生成的 JSON 内容。',
     },
     'ValueError': {
         'message': '参数值不合法。',

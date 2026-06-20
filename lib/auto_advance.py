@@ -6,8 +6,8 @@ from typing import Any
 
 from state import StateManager
 from project import get_current_version_dir
-from llm_risk import estimate_llm_risk, print_llm_risk
 from error_handling import mark_command_failed, retry_with_backoff
+from codex_managed import is_codex_managed, emit_codex_next_action
 
 
 # 状态流转表：每个状态对应 (下一步动作, 执行函数获取器)
@@ -32,7 +32,6 @@ def _do_analyze(project_root: Path, config: dict, state: StateManager) -> dict:
     from human_summary import render_analyze_summary
 
     print('\n📋 正在分析需求...')
-    print_llm_risk(estimate_llm_risk(project_root, config, 'analyze'))
 
     @retry_with_backoff
     def _call():
@@ -57,7 +56,6 @@ def _do_write_dry_run(project_root: Path, config: dict, state: StateManager) -> 
     from human_summary import render_write_summary
 
     print('\n👀 正在预览即将生成的代码...')
-    print_llm_risk(estimate_llm_risk(project_root, config, 'write'))
     result = run_write(project_root, config, dry_run=True)
 
     files = result.get('files', []) or []
@@ -80,7 +78,6 @@ def _do_write(project_root: Path, config: dict, state: StateManager) -> dict:
 
     state.checkpoint('pre_write')
     print('\n🔨 正在生成代码...')
-    print_llm_risk(estimate_llm_risk(project_root, config, 'write'))
 
     @retry_with_backoff
     def _call():
@@ -102,7 +99,6 @@ def _do_review(project_root: Path, config: dict, state: StateManager) -> dict:
     from human_summary import render_review_summary
 
     print('\n🔍 正在审查代码...')
-    print_llm_risk(estimate_llm_risk(project_root, config, 'review'))
 
     @retry_with_backoff
     def _call():
@@ -135,7 +131,6 @@ def _do_fix(project_root: Path, config: dict, state: StateManager) -> dict:
     from human_summary import render_fix_summary
 
     print('\n🔧 正在修复问题...')
-    print_llm_risk(estimate_llm_risk(project_root, config, 'fix'))
 
     @retry_with_backoff
     def _call():
@@ -176,7 +171,6 @@ def _do_comprehensive_review(project_root: Path, config: dict, state: StateManag
     from human_summary import render_review_summary
 
     print('\n🔍 正在执行上线前综合审查（7 维度）...')
-    print_llm_risk(estimate_llm_risk(project_root, config, 'review'))
     result = run_comprehensive_review(project_root, config)
 
     passed = result.get('passed', False)
@@ -249,6 +243,7 @@ def auto_advance(
     """
     config, state, version_dir = _get_config_and_state(project_root)
     status = state.data.get('status', 'unknown')
+    codex_mode = is_codex_managed(config)
 
     # 处理显式动作
     if action == 'confirm':
@@ -262,10 +257,14 @@ def auto_advance(
         state.data['current_task'] = tasks[0]['id'] if tasks else None
         state.save()
         print('✅ 方案已确认！')
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'write')
         # 自动进入 write dry-run
         return _do_write_dry_run(project_root, config, state)
 
     if action == 'confirm-write':
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'write')
         if status not in ('confirmed', 'written'):
             raise RuntimeError(f'当前状态是「{status}」，无法确认生成。')
         result = _do_write(project_root, config, state)
@@ -300,6 +299,8 @@ def auto_advance(
         state.data['revision_feedback'] = feedback
         state.data['last_action'] = 'revise'
         state.save()
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'revise', feedback=feedback)
         print('✅ 已记录你的反馈，正在重新分析...')
         return _do_analyze(project_root, config, state)
 
@@ -324,6 +325,8 @@ def auto_advance(
         return seal_result
 
     if action == 'final_review':
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'final_review')
         return _do_comprehensive_review(project_root, config, state)
 
     if action == 'deploy-skip-review':
@@ -334,6 +337,8 @@ def auto_advance(
 
     # action == 'continue': 按状态自动推进
     if status == 'created':
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'analyze')
         return _do_analyze(project_root, config, state)
 
     if status == 'pending_confirm':
@@ -346,12 +351,18 @@ def auto_advance(
         return {'status': 'pending_confirm', 'action': 'wait_confirm'}
 
     if status == 'confirmed':
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'write')
         return _do_write_dry_run(project_root, config, state)
 
     if status in ('writing', 'written'):
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'review')
         return _do_review(project_root, config, state)
 
     if status in ('needs_fix', 'failed'):
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'fix')
         # 自动 fix → review，最多 3 轮
         fix_review_count = state.data.get('fix_review_count', 0)
         max_fix_review = 3
@@ -409,6 +420,8 @@ def auto_advance(
             state.data['status'] = 'confirmed'
             state.save()
             print(f'\n📋 进入下一个任务：[{next_task["id"]}] {next_task["name"]}')
+            if codex_mode:
+                return emit_codex_next_action(project_root, config, state.data, 'write')
             return _do_write_dry_run(project_root, config, state)
         else:
             # 所有任务完成，进入综合审查阶段
@@ -423,6 +436,8 @@ def auto_advance(
             return {'status': 'pending_final_review', 'action': 'wait_final_review'}
 
     if status == 'pending_final_review':
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'final_review')
         print('\n⚠️  建议先 compact 一次，减少上下文累积导致的幻觉。')
         print('   然后再执行综合审查。')
         print('\n🔍 正在执行综合审查...')
@@ -434,6 +449,8 @@ def auto_advance(
         return {'status': 'ready_to_deploy', 'action': 'wait_deploy'}
 
     if status == 'needs_final_fix':
+        if codex_mode:
+            return emit_codex_next_action(project_root, config, state.data, 'fix')
         print('\n🔧 综合审查发现问题，正在自动修复...')
         fix_result = _do_fix(project_root, config, state)
         print('\n🔍 修复完成，重新执行综合审查...')

@@ -21,25 +21,13 @@ It also carries a light personal-project standard layer for durable project memo
 - Treat analyze, review, final review, and seal as standards-driven gates: do not skip missing non-goals, acceptance criteria, version docs, tests, deployment notes, or release-freeze blockers.
 - Before `seal`, deploy, publish, commit, tag, or any command that produces release/git side effects, ask for explicit user authorization.
 
-## Model Configuration
+## Codex Runtime
 
-When DevTaskFlow is used as a Codex skill, do not ask the user to configure `DTFLOW_LLM_API_KEY` or `OPENAI_API_KEY` before starting. Codex handles the current conversation and tool execution; DevTaskFlow handles project structure, stage state, review gates, and release discipline.
+DevTaskFlow for Codex does not use a separate model endpoint, API key, hidden Codex session, or external orchestrator.
 
-DevTaskFlow must not read Codex account files, session files, hidden credentials, or local keychains.
+Codex handles reasoning, implementation, edits, review, and tool execution in the current session. DevTaskFlow only provides project structure, durable state, stage guidance, checklists, board/status commands, local preview helpers, deployment helpers, and release discipline.
 
-Only ask for explicit model configuration when the user runs `dtflow` as a standalone CLI outside Codex, or when the project is configured to use `local_llm` / an OpenAI-compatible orchestration endpoint. In that mode, configure one of these:
-
-```bash
-DTFLOW_LLM_BASE_URL=https://api.openai.com/v1
-DTFLOW_LLM_API_KEY=sk-...
-DTFLOW_LLM_MODEL=<model-id-available-to-the-user>
-```
-
-Common OpenAI environment variable fallbacks are also supported:
-
-- `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`
-- Project `.env`
-- Optional independent orchestration variables: `DTFLOW_CODEX_BASE_URL`, `DTFLOW_CODEX_API_KEY`, `DTFLOW_CODEX_MODEL`
+Never ask the user to configure model credentials, model names, external model endpoints, or local keychains for the Codex skill workflow. Never read Codex account files, session files, hidden credentials, or local keychains.
 
 ## Core Commands
 
@@ -70,7 +58,7 @@ Use this when the user wants to build a new app, tool, internal system, dashboar
 3. Show the generated requirement suggestions and ask whether the user wants to add anything.
 4. Continue with `dtflow start --confirm` after the user approves the plan.
 5. Use `dtflow start --confirm-write` after previewing the write plan.
-6. Let DevTaskFlow run review/fix loops until task review passes.
+6. Let the current Codex session implement, review, and fix tasks while DevTaskFlow records status and handoff notes.
 7. Run `dtflow start --final-review` before deployment unless the user explicitly asks to skip it.
 8. Run `dtflow start --run` for local preview and give the local URL to the user.
 9. Deploy only after the user confirms the preview.
@@ -83,7 +71,7 @@ Use this when the user has an existing project and wants DevTaskFlow to add stru
 2. If `.dtflow/config.json` is missing, ask before adding DevTaskFlow files, then run `dtflow start --new-project --path /absolute/repo/path --name NAME --idea "governance and development goal"`.
 3. Keep existing project conventions as the source of truth; DevTaskFlow docs should record and organize them, not replace them.
 4. Fill or flag gaps in `docs/project/`, `docs/process/`, `docs/versions/`, and `AGENTS.md`: purpose, target users, core workflow, non-goals, acceptance criteria, commands, risks, deployment notes, and rollback method.
-5. Continue with the same staged workflow as a new project: analyze, confirm, preview write plan, implement, review, fix, final review, preview, deploy, and seal when authorized.
+5. Continue with the same staged workflow as a new project: Codex analyzes, implements, reviews, and fixes; DevTaskFlow records status, handoff notes, preview/deploy helpers, and seal checks.
 
 ### Existing DevTaskFlow Project
 
@@ -170,4 +158,4 @@ Translate internal states into user-facing language:
 - The board server is local-only and defaults to port `8765`.
 - `dtflow start --deploy` currently deploys and then seals through auto-advance. Treat it as a release action that needs explicit authorization, not as a lightweight preview.
 - Docker deployment requires Docker. GitHub release publishing requires `gh` to be installed and authenticated.
-- `codex_subagent` is an optional OpenAI-compatible orchestration mode configured through the `codex` block; `local_llm` remains the default.
+- The default orchestration is `codex_managed`: current Codex session does the intelligent work; `dtflow` records state and writes `CODEX_NEXT_ACTION.md` handoff notes when needed.

@@ -11,22 +11,11 @@
     "docs_dir": "docs",
     "state_file": ".state.json"
   },
-  "llm": {
-    "provider": "openai-compatible"
-  },
   "adapters": {
     "deploy": "shell",
     "archive": "local-copy",
-    "orchestration": "local_llm",
+    "orchestration": "codex_managed",
     "publish": "github"
-  },
-  "codex": {
-    "base_url": "",
-    "api_key": "",
-    "model": "",
-    "agent_id": "codex-skill-runner",
-    "mode": "run",
-    "timeout_seconds": 900
   },
   "deploy": {
     "build_command": "",

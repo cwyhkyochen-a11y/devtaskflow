@@ -56,7 +56,7 @@ def run_review(project_root: Path, config: dict):
 
     passed = result.get('passed') if isinstance(result.get('passed'), bool) else parse_review_passed(review_text)
     state.data['status'] = 'review_passed' if passed else 'needs_fix'
-    state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'local_llm') or 'local_llm'
+    state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'codex_managed') or 'codex_managed'
     state.data['last_result_format'] = result.get('result_format', 'unknown')
     state.data['last_summary'] = result.get('summary', '')
     state.save()
@@ -173,7 +173,7 @@ def run_comprehensive_review(project_root: Path, config: dict):
             score = None  # 无法解析评分时返回 None，而非伪造默认值
 
     state.data['status'] = 'comprehensive_review_passed' if passed else 'comprehensive_review_failed'
-    state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'local_llm') or 'local_llm'
+    state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'codex_managed') or 'codex_managed'
     state.data['last_result_format'] = result.get('result_format', 'unknown')
     state.data['last_summary'] = summary_text[:500]
     state.save()

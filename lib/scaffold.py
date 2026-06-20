@@ -1,4 +1,5 @@
 import shutil
+import json
 from pathlib import Path
 
 from git_utils import ensure_git_repo
@@ -26,11 +27,13 @@ def init_project_structure(project_root: Path, templates_dir: Path, project_name
         shutil.copy2(env_src, env_dst)
 
     final_name = project_name or project_root.name
-    config_text = config_dst.read_text(encoding='utf-8')
-    config_text = config_text.replace('your-project-name', final_name)
-    config_dst.write_text(config_text, encoding='utf-8')
-
     workspace_root = workspace_root or find_workspace_root(project_root)
+    config = json.loads(config_dst.read_text(encoding='utf-8'))
+    config.setdefault('project', {})['name'] = final_name
+    config.setdefault('project', {})['board_name'] = final_name
+    config.setdefault('project', {})['workspace_root'] = str(workspace_root.resolve())
+    config_dst.write_text(json.dumps(config, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
     project_rel_path = str(project_root.resolve().relative_to(workspace_root.resolve())) if str(project_root.resolve()).startswith(str(workspace_root.resolve())) else str(project_root.resolve())
     board_item = register_project(workspace_root, final_name, project_rel_path)
 

@@ -89,7 +89,7 @@ def run_write(project_root: Path, config: dict, task_id: str | None = None, dry_
 
     written = apply_file_blocks(project_root, file_blocks, dry_run=dry_run)
     state.data['status'] = 'confirmed' if dry_run else 'written'
-    state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'local_llm') or 'local_llm'
+    state.data['last_orchestration'] = config.get('adapters', {}).get('orchestration', 'codex_managed') or 'codex_managed'
     state.data['last_result_format'] = result.get('result_format', 'unknown')
     state.data['last_summary'] = result.get('summary', '')
     state.save()
