@@ -1,219 +1,171 @@
 ---
-name: DevTaskFlow
-version: 1.1.0
-description: 用自然语言发起开发任务，AI 驱动的开发流水线。Describe your idea, get working software. 适合产品、运营、业务人员从 0 搭建项目。
-metadata:
-  {
-    "openclaw": {
-      "requires": {
-        "python": ">=3.10",
-        "node": ">=18"
-      }
-    }
-  }
-license: MIT-0
+name: devtaskflow
+description: Use DevTaskFlow when a user wants to start, continue, govern, or release a tracked software project from plain-language requirements. Trigger for new app/tool/platform ideas, adding project memory and governance to an existing repo while continuing development, resuming a DevTaskFlow project, checking what stage a project is in, identifying missing requirements or blockers, running AI-assisted analysis/implementation/review/fix/preview/deploy flows, sealing a version, or publishing a generated project. Do not force DevTaskFlow for isolated one-off edits unless the user asks for project tracking, long-running goal work, governance, versioning, or release discipline.
 ---
 
-# DevTaskFlow — Agent 使用手册
+# DevTaskFlow
 
-## 什么时候用
+DevTaskFlow is a Codex skill plus CLI for running a software-development pipeline from natural language: requirements -> plan -> code -> review -> fixes -> final review -> local preview -> deploy -> release.
 
-当用户表达以下意图时，**主动建议**使用本工具：
+It also carries a light personal-project standard layer for durable project memory: `AGENTS.md`, `docs/project/`, `docs/process/`, `docs/decisions/`, `docs/versions/`, and `ops/` when deployment is in scope.
 
-- "我想做一个 XXX 系统/工具/平台"
-- "帮我开发一个 XXX"
-- "我需要一个 XXX，功能是..."
-- 用户描述了一个软件/系统需求
-- 用户问项目进展、想继续做、想看进度
+## Before Acting
 
-**识别意图后，向用户建议使用本工具，但必须等用户确认后再执行。** 尤其是涉及代码生成、部署、发布等操作，不要在未经确认的情况下自动执行。
+- Use DevTaskFlow directly when the user explicitly asks for `$devtaskflow`, a tracked goal project, versioned development, governance, progress tracking, preview/deploy/release flow, or continuing an existing DevTaskFlow project.
+- Suggest DevTaskFlow, then ask before creating files, when the request only implicitly looks like a long-running project or existing-repo governance task.
+- Do not force DevTaskFlow for small one-off bug fixes, code reviews, refactors, or explanations unless the user asks to bring that work under project tracking.
+- If the user's request is vague, first clarify only the missing decision that blocks the next stage, such as audience, core workflow, login/auth needs, data model, integrations, deployment target, or acceptance criteria.
+- Run commands from the project root that contains `.dtflow/config.json`. For a new tracked project or an existing repo being brought under DevTaskFlow, `dtflow start --new-project` creates the structure.
+- If Python dependencies are missing, install them with `pip install -r requirements.txt` from the DevTaskFlow skill directory.
+- For personal long-running projects, multi-window work, subagent work, handoff memory, or version freeze, read `references/personal-project-standards.md` before deciding the project structure or release steps.
+- Treat analyze, review, final review, and seal as standards-driven gates: do not skip missing non-goals, acceptance criteria, version docs, tests, deployment notes, or release-freeze blockers.
+- Before `seal`, deploy, publish, commit, tag, or any command that produces release/git side effects, ask for explicit user authorization.
 
-## Token 消耗参考
+## LLM Configuration
 
-开发一个项目会消耗大量 token，提前告知用户：
-
-| 项目规模 | 预估 Token 消耗 | 示例 |
-|---------|---------------|------|
-| 小型 | 300-500 万 | 简单的个人工具、静态页面、小表单 |
-| 中型 | ~4000 万 | 多页面管理后台、带数据库的应用、用户系统 |
-| 大型 | 2 亿+ | 复杂业务系统、多角色权限、API 集成 |
-
-消耗取决于需求复杂度、迭代次数、审查修复次数。首次可先用小项目试水。
-
-## 支持的模型
-
-推荐模型：Claude Opus 4.6（复杂项目首选）、GPT 5.4（性价比高）、小米 Mimo V2 Pro（中文好）。完整列表和说明见 README.md。
-
-## 编排模式
-
-DevTaskFlow 支持两种编排模式，通过 `config.json` 的 `adapters.orchestration` 切换：
-
-### local_llm（默认）
-
-直接使用环境变量中的 LLM 配置：
-
-```
-DTFLOW_LLM_BASE_URL=https://api.openai.com/v1
-DTFLOW_LLM_API_KEY=sk-xxx
-DTFLOW_LLM_MODEL=gpt-4o
-```
-
-### openclaw_subagent
-
-使用独立的 LLM 配置，与主 LLM 分离。适合在 OpenClaw 环境下使用不同模型处理开发任务。
-
-配置方式 A — `config.json` 的 `openclaw` 段：
-
-```json
-{
-  "adapters": { "orchestration": "openclaw_subagent" },
-  "openclaw": {
-    "base_url": "https://api.example.com/v1",
-    "api_key": "sk-xxx",
-    "model": "claude-opus-4-6",
-    "timeout_seconds": 900
-  }
-}
-```
-
-配置方式 B — 环境变量：
-
-```
-DTFLOW_OPENCLAW_BASE_URL=https://api.example.com/v1
-DTFLOW_OPENCLAW_API_KEY=sk-xxx
-DTFLOW_OPENCLAW_MODEL=claude-opus-4-6
-```
-
-如果 `config.json` 中字段为空，自动 fallback 到环境变量。
-
-## 核心命令
+DevTaskFlow calls an OpenAI-compatible `/chat/completions` endpoint. Configure one of these before running generation:
 
 ```bash
-dtflow setup                                        # 配置 AI 服务（交互式）
-dtflow start --new-project --name NAME --idea "需求"  # 开始新项目
-dtflow start                                        # 继续上次进度
-dtflow start --confirm                              # 确认分析方案，开始生成代码（先预览，用户确认后再写入）
-dtflow start --confirm-write                        # 在预览确认后，正式执行代码写入
-dtflow start --feedback "修改意见"                   # 提出修改
-dtflow start --run                                  # 本地预览
-dtflow start --deploy                               # 部署上线并封版
-dtflow start --final-review                         # 执行上线前综合审查（9 维度）
-dtflow start --deploy-skip-review                   # 跳过综合审查直接部署（仅在用户明确要求跳过或时间紧迫时使用，建议默认走完整审查流程）
-dtflow board                                        # 所有项目状态（文字）
-dtflow board --serve                                # 启动可视化看板服务
-dtflow board-query --name PROJECT                   # 单个项目详情（文字）
-dtflow advanced publish --target github              # 发布到 GitHub Releases
-dtflow advanced publish --target clawhub             # 发布到 ClawHub
+DTFLOW_LLM_BASE_URL=https://api.openai.com/v1
+DTFLOW_LLM_API_KEY=sk-...
+DTFLOW_LLM_MODEL=<model-id-available-to-the-user>
 ```
 
-## 工作流程
+Codex-friendly fallbacks are also supported:
 
-### 用户提出新需求
+- `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`
+- Project `.env`
+- Optional independent orchestration variables: `DTFLOW_CODEX_BASE_URL`, `DTFLOW_CODEX_API_KEY`, `DTFLOW_CODEX_MODEL`
 
-**如果用户有明确需求描述**（比如"我想做一个客户管理工具"）：
-1. `dtflow start --new-project --name 项目名 --idea "用户的需求原文"`
-2. 系统创建项目、给出补充建议
-3. 向用户展示建议，问是否要补充
-4. 确认后自动 analyze → 展示任务列表
-5. `dtflow start --confirm` → 自动 write（先预览）→ review → fix → review
-6. 全部任务通过后 → **建议先 compact 一次**（减少上下文累积导致的幻觉）— 提醒主 agent 使用 `/compact` 或清理上下文后再执行综合审查 → 综合审查（`dtflow start --final-review`）— 9 维度全面检查
-7. 综合审查通过 → `dtflow start --run` 本地预览
-8. 用户确认没问题 → `dtflow start --deploy`
+Do not read or expose Codex account/session files. Ask the user to provide an explicit API key or environment variable when configuration is missing.
 
-**如果用户需求模糊**（比如"我想做个东西管理客户信息"）：
-1. 不要直接调用 dtflow，先通过对话引导收集需求
-2. 问清楚：
-   - 给谁用的？（团队/客户/个人）
-   - 最核心的功能是什么？
-   - 需要登录吗？
-   - 有技术偏好吗？（不知道就帮你选）
-3. 收集到足够信息后，拼成需求调用 dtflow start
+## Core Commands
 
-### 用户想本地预览
+```bash
+dtflow setup
+dtflow start --new-project --name NAME --idea "需求"
+dtflow start
+dtflow start --confirm
+dtflow start --confirm-write
+dtflow start --feedback "修改意见"
+dtflow start --run
+dtflow start --final-review
+dtflow start --deploy
+dtflow board
+dtflow board --serve
+dtflow board-query --name PROJECT
+dtflow advanced publish --target github
+```
 
-1. `dtflow start --run`
-2. 返回访问链接给用户
+## Entry Modes
 
-### 用户想看项目进展
+### New Tracked Project
 
-1. 检查看板服务是否在运行（`curl -s http://localhost:8765 > /dev/null && echo "running" || echo "stopped"`）
-2. 如果在运行 → 发链接
-3. 如果不在运行 → `dtflow board` 文字版
+Use this when the user wants to build a new app, tool, internal system, dashboard, automation, SDK, script, or platform as a tracked goal.
 
-### 用户问某个项目详情
+1. Run `dtflow start --new-project --name NAME --idea "user's original requirement"`.
+2. Confirm the project skeleton includes `AGENTS.md`, stable project docs, process docs, decisions, and `docs/versions/`.
+3. Show the generated requirement suggestions and ask whether the user wants to add anything.
+4. Continue with `dtflow start --confirm` after the user approves the plan.
+5. Use `dtflow start --confirm-write` after previewing the write plan.
+6. Let DevTaskFlow run review/fix loops until task review passes.
+7. Run `dtflow start --final-review` before deployment unless the user explicitly asks to skip it.
+8. Run `dtflow start --run` for local preview and give the local URL to the user.
+9. Deploy only after the user confirms the preview.
 
-1. `dtflow board-query --name 项目名`
-2. 把文字结果发给用户
+### Existing Repo Governance And Development
 
-### 用户想继续之前的项目
+Use this when the user has an existing project and wants DevTaskFlow to add structure, memory, version discipline, or goal-driven development while continuing real implementation work.
 
-1. `dtflow start`（不加参数，自动继续）
-2. 根据输出告知用户当前阶段
+1. Inspect the repo first: read `AGENTS.md` if present, existing README/docs, package files, test/build commands, and current git status.
+2. If `.dtflow/config.json` is missing, ask before adding DevTaskFlow files, then run `dtflow start --new-project --path /absolute/repo/path --name NAME --idea "governance and development goal"`.
+3. Keep existing project conventions as the source of truth; DevTaskFlow docs should record and organize them, not replace them.
+4. Fill or flag gaps in `docs/project/`, `docs/process/`, `docs/versions/`, and `AGENTS.md`: purpose, target users, core workflow, non-goals, acceptance criteria, commands, risks, deployment notes, and rollback method.
+5. Continue with the same staged workflow as a new project: analyze, confirm, preview write plan, implement, review, fix, final review, preview, deploy, and seal when authorized.
 
-### 用户想发布
+### Existing DevTaskFlow Project
 
-**发布到 GitHub：**
-1. 确保项目已封版（sealed）或已部署（deployed）
-2. 确保已安装 `gh` CLI 并登录
-3. `dtflow advanced publish --target github`
+Use this when `.dtflow/config.json` already exists or the user asks to continue/check progress.
 
-**发布到 ClawHub：**
-1. 确保项目已封版或已部署
-2. 确保已安装 `clawhub` CLI 并登录
-3. 确保项目根目录有 `SKILL.md`
-4. `dtflow advanced publish --target clawhub`
+- To continue the current project, run `dtflow start`.
+- To add a small change request, run `dtflow start --feedback "user feedback"`.
+- For major scope changes, do not overwrite the current version. Ask whether to finish/seal the current version first, use the already-created next version after sealing, or start a separate tracked project.
+- To inspect progress, use `dtflow board` or `dtflow board-query --name PROJECT`.
+- For sealed versions, treat new scope as the next version unless the user explicitly asks for a patch or erratum.
 
-### 首次使用（环境未配置）
+## Stage Orientation
 
-1. `dtflow setup` 交互式引导（含 AI 配置 + 部署方式选择）
-2. 非交互环境下手动创建 `.env`：
-   ```
-   DTFLOW_LLM_BASE_URL=...
-   DTFLOW_LLM_API_KEY=...
-   DTFLOW_LLM_MODEL=...
-   ```
+When entering an existing DevTaskFlow project, orient before acting:
 
-## 状态机
+1. Find the project root with `.dtflow/config.json`.
+2. Run `dtflow advanced status` from the project root, or `dtflow board-query --name PROJECT` from the workspace.
+3. Read `AGENTS.md`, current `docs/project/` files, current `docs/versions/<version>/docs/REQUIREMENTS.md`, and current review/final-review docs when present.
+4. Check `.state.json` only as internal state. Use it to identify `status`, `current_task`, `tasks`, `last_summary`, and `last_error`, but do not expose raw state files to the user.
+5. Report the current stage, the next useful action, and any missing blockers in plain language.
 
-`dtflow start` 自动推进，你只需知道阶段：
+## Stage Actions
 
-| 状态 | 含义 | 你该说什么 |
-|------|------|-----------|
-| created | 刚创建 | "项目已创建，正在分析需求..." |
-| pending_confirm | 方案已出 | "我分析了你的需求，建议做这几件事：..." |
-| confirmed | 已确认 | "好的，开始生成代码..." |
-| writing/written | 代码已生成 | "代码写好了，我在检查..." |
-| needs_fix | 有问题 | "发现几个小问题，已修复：..." |
-| review_passed | 审查通过 | "代码没问题了，要本地先看看效果吗？" |
-| pending_final_review | 综合审查待执行 | "运行 dtflow start --final-review 执行综合审查，或 --deploy-skip-review 跳过" |
-| ready_to_deploy | 综合审查通过 | "可以部署了，运行 dtflow start --deploy" |
-| needs_final_fix | 综合审查发现问题 | "运行 dtflow start 自动修复并重新审查" |
-| sealed | 已封版 | "上线完成！" |
+| State | Meaning | Default action |
+| --- | --- | --- |
+| `initialized` / `created` | Project or version exists, requirements may be incomplete | Collect or add the version goal, target users, core workflow, scope, non-goals, and acceptance criteria; then run `dtflow start`. |
+| `pending_confirm` | Analysis plan is ready | Summarize plan and gaps; run `dtflow start --confirm` only after approval, or `dtflow start --feedback "..."` for changes. |
+| `confirmed` | Plan is approved | Run `dtflow start` to preview the write plan. |
+| `writing` / `written` | Code generation is underway or just completed | Let review continue with `dtflow start`; summarize files and next review stage. |
+| `reviewing` | Task review is underway | Wait or continue with `dtflow start`; do not deploy yet. |
+| `needs_fix` / `fixing` | Review found issues | Run `dtflow start` to fix and re-review; surface blocker themes without dumping raw review files. |
+| `review_passed` | A task or all tasks passed review | Run `dtflow start` to move to the next task; if no tasks remain, prepare final review. |
+| `pending_final_review` | All task reviews passed; final review is next | Recommend context compaction if needed, then run `dtflow start --final-review`. |
+| `ready_to_deploy` | Final review passed | Offer local preview with `dtflow start --run`; deploy only after user confirmation. |
+| `needs_final_fix` | Final review found blockers | Run `dtflow start` to fix final-review issues; report missing tests, docs, deployment notes, or acceptance gaps. |
+| `deployed` / `all_done` | Deployment or all work is complete | Offer seal/release-freeze; run seal only after explicit authorization. |
+| `sealed` | Version is finalized | Treat new scope as a new version, patch, or erratum based on user intent. |
+| `failed` | Last action failed | Run `dtflow advanced status` and, if needed, `dtflow advanced doctor` or `dtflow advanced recover`; explain `last_error` plainly. |
 
-## 向用户展示什么
+## Missing Context To Surface
 
-**不要暴露：** analyze、DEV_PLAN.md、orchestration、config.json、.state.json、token 数
-**应该说：** "我分析了需求"、"代码已生成"、"检查过了没问题"、"可以部署了"
+Always surface missing context when it affects the next stage:
 
-## 注意事项
+- Product: version goal, target users, core workflow, functional scope, non-goals, data scope, acceptance criteria.
+- Engineering: stack, existing conventions, typecheck/test/build commands, important error paths, migration needs.
+- Design: target device sizes, density, key screens, empty/error states, copy quality, usability risks.
+- Operations: deployment target, build artifact, deploy method, preview URL, verification, rollback method.
+- Release: unresolved P0/P1 tasks, placeholders, failed checks, dirty git status, missing changelog, unapproved commit/tag/publish steps.
 
-- `dtflow setup` 是交互式命令，在非交互环境不可用
-- 所有命令在项目根目录运行，项目根目录是包含 `.dtflow/config.json` 的目录，可通过 `ls .dtflow/config.json` 确认
-- board 的 Node.js 应用需要 `npm install`（首次自动执行）
-- 看板服务默认端口 8765，**仅限本地使用，不要暴露到公网**
-- board API 已脱敏：不返回 host/user/path 等敏感部署信息
-- `run` 本地预览需要项目有可执行的启动命令（npm start / python app.py 等）
-- Docker 部署需要本地安装 Docker
-- `openclaw_subagent` 编排器需要在 `config.json` 或环境变量中配置独立的 LLM 连接信息
+## Personal Project Standard
 
-### 常见问题处理
+- Keep stable project facts in `docs/project/`; keep version facts in `docs/versions/`; keep cross-version decisions in `docs/decisions/`.
+- Treat `AGENTS.md` as the project-level collaboration contract and reading map. Do not put private machine paths, secrets, temporary prompts, or one-person-only preferences there.
+- During analysis, require a version goal, target users, core workflow, functional scope, explicit non-goals, data scope, acceptance criteria, risks, and dependencies.
+- During review, include product copy quality, design usability, development tests, observable error paths, and deployment readiness when relevant.
+- When the user says "封版", run the release-freeze checks before commit, tag, deployment archive, or release publishing; blockers must be fixed or explicitly moved into an accepted patch/erratum flow.
 
-- **dtflow 命令报错**: 检查是否在项目根目录（含 `.dtflow/config.json`）、模型 API Key 是否有效、余额是否充足
-- **部署失败**: 检查 Docker/SSH 连接、目标服务器权限、config.json 中的 deploy 配置
-- **审查反复不通过**: 检查是否有结构性问题（如框架选择不当），必要时让用户给出报错信息手动排查
-- **run 启动失败**: 检查项目启动命令（`npm start` / `python app.py`）、依赖是否安装完整
+## Status Language
 
-### 边界场景
+Translate internal states into user-facing language:
 
-- **用户想取消项目**: 归档项目（状态设为 archived）但不删除文件，保留以便后续恢复
-- **用户中途改需求**: 如果是小调整 → 用 `dtflow start --feedback "修改意见"` 在当前版本迭代；如果是大方向变更 → 建议新建版本（`dtflow advanced version --new`）
+| State | Meaning | User-facing summary |
+| --- | --- | --- |
+| `initialized` / `created` | Project/version created | "项目已创建，正在补齐目标和需求。" |
+| `pending_confirm` | Plan ready | "方案已生成，等你确认或补充。" |
+| `confirmed` | Approved | "已确认，开始生成代码。" |
+| `writing` / `written` | Code generation underway/done | "代码已生成，我在审查。" |
+| `needs_fix` | Review found issues | "发现问题，正在修复并复审。" |
+| `review_passed` | Task review passed | "任务级审查通过，可以做最终审查。" |
+| `ready_to_deploy` | Final review passed | "最终审查通过，可以预览或部署。" |
+| `needs_final_fix` | Final review failed | "最终审查发现问题，需要修复。" |
+| `failed` | Last action failed | "上一步失败，我会先定位原因和可恢复路径。" |
+| `sealed` | Version finalized | "版本已封版。" |
+
+## What To Show
+
+- Show concise progress, decisions, preview URLs, review summaries, and next steps.
+- Avoid exposing implementation internals such as `DEV_PLAN.md`, `.state.json`, raw orchestration payloads, hidden config files, API keys, or token counts.
+- For failures, summarize the likely cause and next command to try. Use `dtflow advanced doctor` for environment diagnostics.
+
+## Notes
+
+- `dtflow setup` is interactive; in non-interactive Codex work, prefer writing `.env` only when the user has explicitly provided credentials.
+- The board server is local-only and defaults to port `8765`.
+- `dtflow start --deploy` currently deploys and then seals through auto-advance. Treat it as a release action that needs explicit authorization, not as a lightweight preview.
+- Docker deployment requires Docker. GitHub release publishing requires `gh` to be installed and authenticated.
+- `codex_subagent` is an optional OpenAI-compatible orchestration mode configured through the `codex` block; `local_llm` remains the default.

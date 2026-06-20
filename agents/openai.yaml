@@ -1,0 +1,7 @@
+interface:
+  display_name: "DevTaskFlow"
+  short_description: "Track, govern, and ship software projects."
+  default_prompt: "Use $devtaskflow to start or continue a tracked software project with governance, review checkpoints, and version memory."
+
+policy:
+  allow_implicit_invocation: true

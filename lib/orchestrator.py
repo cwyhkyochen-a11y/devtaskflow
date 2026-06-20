@@ -15,11 +15,11 @@ def get_orchestrator(config: dict):
         except ImportError as e:
             raise OrchestratorError(f'无法导入 LocalLLMOrchestrator: {e}。请检查 orchestrators/local_llm.py 是否存在。')
         return LocalLLMOrchestrator(config)
-    if mode == 'openclaw_subagent':
+    if mode == 'codex_subagent':
         try:
-            from orchestrators.openclaw_subagent import OpenClawSubagentOrchestrator
+            from orchestrators.codex_subagent import CodexSubagentOrchestrator
         except ImportError as e:
-            raise OrchestratorError(f'无法导入 OpenClawSubagentOrchestrator: {e}。请检查 orchestrators/openclaw_subagent.py 是否存在。')
-        return OpenClawSubagentOrchestrator(config)
+            raise OrchestratorError(f'无法导入 CodexSubagentOrchestrator: {e}。请检查 orchestrators/codex_subagent.py 是否存在。')
+        return CodexSubagentOrchestrator(config)
 
     raise OrchestratorError(f'不支持的 orchestration 模式: {mode}')

@@ -134,58 +134,8 @@ class GitHubPublishAdapter(BasePublishAdapter):
         }
 
 
-class ClawHubPublishAdapter(BasePublishAdapter):
-    name = 'clawhub'
-
-    def publish(self, project_root: Path, config: dict, **kwargs) -> dict:
-        version_dir = get_current_version_dir(project_root, config)
-        if not version_dir:
-            raise RuntimeError('没有找到当前版本目录')
-
-        state = StateManager(version_dir)
-        if state.data.get('status') not in {'sealed', 'deployed', 'all_done'}:
-            raise RuntimeError(f"当前状态不允许 publish: {state.data.get('status')}")
-
-        # 1. 检查 clawhub CLI 是否可用
-        run_cmd(['clawhub', '--cli-version'], project_root)
-
-        # 2. 检查是否已登录
-        whoami = run_cmd(['clawhub', 'whoami'], project_root)
-        if not whoami:
-            raise RuntimeError('clawhub 未登录，请先运行 clawhub login')
-
-        # 3. 读取 SKILL.md 获取 skill 元信息
-        skill_md = project_root / 'SKILL.md'
-        if not skill_md.exists():
-            raise RuntimeError('未找到 SKILL.md，clawhub 发布需要 SKILL.md 文件')
-
-        # 4. 调用 clawhub publish 发布
-        skill_path = kwargs.get('skill_path', str(project_root))
-        output = run_cmd(['clawhub', 'publish', skill_path], project_root)
-
-        # 5. 记录发布结果到 state
-        state.data['publish'] = {
-            'target': 'clawhub',
-            'version': version_dir.name,
-            'skill_path': skill_path,
-            'whoami': whoami,
-            'output': output,
-        }
-        state.save()
-
-        return {
-            'target': 'clawhub',
-            'version': version_dir.name,
-            'skill_path': skill_path,
-            'whoami': whoami,
-            'output': output,
-            'message': '已通过 clawhub 发布。',
-        }
-
-
 ADAPTERS = {
     'github': GitHubPublishAdapter,
-    'clawhub': ClawHubPublishAdapter,
 }
 
 

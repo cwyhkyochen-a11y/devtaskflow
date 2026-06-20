@@ -8,16 +8,16 @@ class LLMError(Exception):
 
 class OpenAICompatibleLLM:
     def __init__(self, config: dict):
-        from openclaw_config import detect_openclaw_llm
+        from codex_config import detect_codex_llm
 
         llm = config.get('llm', {})
         self.base_url = os.getenv(llm.get('base_url_env', 'DTFLOW_LLM_BASE_URL'), '').rstrip('/')
         self.api_key = os.getenv(llm.get('api_key_env', 'DTFLOW_LLM_API_KEY'), '')
         self.model = os.getenv(llm.get('model_env', 'DTFLOW_LLM_MODEL'), '')
 
-        # Fallback: 自动从 OpenClaw 配置读取
+        # Fallback: Codex-friendly env/project .env detection.
         if not all([self.base_url, self.api_key, self.model]):
-            oc = detect_openclaw_llm()
+            oc = detect_codex_llm()
             if not self.base_url:
                 self.base_url = oc.get('base_url', '')
             if not self.api_key:

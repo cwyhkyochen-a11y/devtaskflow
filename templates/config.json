@@ -18,13 +18,13 @@
     "deploy": "shell",
     "archive": "local-copy",
     "orchestration": "local_llm",
-    "publish": "clawhub"
+    "publish": "github"
   },
-  "openclaw": {
+  "codex": {
     "base_url": "",
     "api_key": "",
     "model": "",
-    "agent_id": "skill-runner",
+    "agent_id": "codex-skill-runner",
     "mode": "run",
     "timeout_seconds": 900
   },

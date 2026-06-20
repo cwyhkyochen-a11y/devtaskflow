@@ -9,7 +9,7 @@ const WORKSPACE = process.env.DTFLOW_WORKSPACE || process.cwd();
 const PORT = process.env.DTFLOW_BOARD_PORT || 8765;
 
 function loadProjects() {
-  // 优先从 PROJECTS.md 注释中的 JSON 加载（与 Python 端一致）
+  // 优先从 PROJECTS.md 项目索引注释中的 JSON 加载（与 Python 端一致）
   const mdFile = path.join(WORKSPACE, 'PROJECTS.md');
   if (fs.existsSync(mdFile)) {
     try {
@@ -25,7 +25,7 @@ function loadProjects() {
         }
       }
     } catch (e) {
-      console.warn('⚠️ 解析 PROJECTS.md 失败，尝试 fallback 到 PROJECTS.json:', e.message);
+      console.warn('⚠️ 解析 PROJECTS.md 项目索引失败，尝试 fallback 到 PROJECTS.json:', e.message);
     }
   }
   // fallback: 读取 PROJECTS.json
