@@ -15,7 +15,7 @@ DevTaskFlow 会把这件事拆成可追踪的开发流程：
 | 步骤 | 做什么 | 你需要做什么 |
 | --- | --- | --- |
 | 需求分析 | 拆成功能清单、技术方案、设计规范 | 确认或补充 |
-| 代码生成 | 调用 OpenAI-compatible LLM 写项目代码 | 预览写入计划 |
+| 代码生成 | 由 Codex/DevTaskFlow 编排生成项目代码 | 预览写入计划 |
 | 代码审查 | 逐任务检查代码质量和需求符合度 | 看摘要 |
 | 自动修复 | 发现问题后修复并复审 | 无 |
 | 综合审查 | 9 维度上线前检查 | 看报告 |
@@ -30,7 +30,8 @@ DevTaskFlow 会把这件事拆成可追踪的开发流程：
 - 支持本地运行、部署、封版、GitHub Release 发布
 - 多项目看板，进度可追踪
 - 写入前 dry-run 预览，路径写入限制在项目目录内
-- 支持 Codex 环境中的显式 API 配置和项目 `.env`
+- 在 Codex 中作为 skill 使用时，不需要用户额外配置 LLM API Key
+- 独立 CLI / local_llm 模式仍支持显式 API 配置和项目 `.env`
 
 ## 快速开始
 
@@ -39,7 +40,6 @@ DevTaskFlow 会把这件事拆成可追踪的开发流程：
 - Codex CLI/Desktop 或支持 Codex skills 的运行环境
 - Python 3.10+
 - Node.js 18+（仅看板服务需要）
-- 一个 OpenAI-compatible LLM API Key
 
 安装 Python 依赖：
 
@@ -58,9 +58,15 @@ cp -R /path/to/devtaskflow ~/.codex/skills/devtaskflow
 
 如果你是在这个仓库里开发或审查，可以直接在当前目录运行命令。
 
-### 配置 LLM
+### 在 Codex 中使用
 
-推荐用项目 `.env` 或环境变量显式配置：
+在 Codex 里通过 `$devtaskflow` 使用时，直接发起任务即可，不需要先配置 `DTFLOW_LLM_API_KEY` 或 `OPENAI_API_KEY`。Codex 负责当前对话里的推理和执行，DevTaskFlow 负责项目结构、阶段状态、检查点、审查和发布纪律。
+
+DevTaskFlow 不读取 Codex 账号、会话文件或隐藏凭据，也不会要求用户把 Codex 登录态复制出来。
+
+### 独立 CLI 模式才需要配置 LLM
+
+只有在离开 Codex、把 `dtflow` 当独立命令行编排器运行，或显式选择 `local_llm` / OpenAI-compatible 编排模式时，才需要提供模型端点和 API key：
 
 ```bash
 DTFLOW_LLM_BASE_URL=https://api.openai.com/v1
@@ -68,15 +74,13 @@ DTFLOW_LLM_API_KEY=sk-...
 DTFLOW_LLM_MODEL=<你的账号可用的模型 ID>
 ```
 
-也支持 Codex/OpenAI 常见变量：
+也可以用常见 OpenAI 环境变量：
 
 ```bash
-OPENAI_API_KEY=sk-...
 OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_API_KEY=sk-...
 OPENAI_MODEL=<你的账号可用的模型 ID>
 ```
-
-DevTaskFlow 不读取 Codex 会话或账号文件，避免隐式使用凭据。
 
 ### 发起新项目
 

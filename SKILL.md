@@ -21,9 +21,13 @@ It also carries a light personal-project standard layer for durable project memo
 - Treat analyze, review, final review, and seal as standards-driven gates: do not skip missing non-goals, acceptance criteria, version docs, tests, deployment notes, or release-freeze blockers.
 - Before `seal`, deploy, publish, commit, tag, or any command that produces release/git side effects, ask for explicit user authorization.
 
-## LLM Configuration
+## Model Configuration
 
-DevTaskFlow calls an OpenAI-compatible `/chat/completions` endpoint. Configure one of these before running generation:
+When DevTaskFlow is used as a Codex skill, do not ask the user to configure `DTFLOW_LLM_API_KEY` or `OPENAI_API_KEY` before starting. Codex handles the current conversation and tool execution; DevTaskFlow handles project structure, stage state, review gates, and release discipline.
+
+DevTaskFlow must not read Codex account files, session files, hidden credentials, or local keychains.
+
+Only ask for explicit model configuration when the user runs `dtflow` as a standalone CLI outside Codex, or when the project is configured to use `local_llm` / an OpenAI-compatible orchestration endpoint. In that mode, configure one of these:
 
 ```bash
 DTFLOW_LLM_BASE_URL=https://api.openai.com/v1
@@ -31,13 +35,11 @@ DTFLOW_LLM_API_KEY=sk-...
 DTFLOW_LLM_MODEL=<model-id-available-to-the-user>
 ```
 
-Codex-friendly fallbacks are also supported:
+Common OpenAI environment variable fallbacks are also supported:
 
 - `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`
 - Project `.env`
 - Optional independent orchestration variables: `DTFLOW_CODEX_BASE_URL`, `DTFLOW_CODEX_API_KEY`, `DTFLOW_CODEX_MODEL`
-
-Do not read or expose Codex account/session files. Ask the user to provide an explicit API key or environment variable when configuration is missing.
 
 ## Core Commands
 
