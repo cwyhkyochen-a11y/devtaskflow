@@ -43,32 +43,32 @@ def parse_file_blocks(code_result: str):
     return files
 
 
-class _OpenClawLLM:
-    """OpenClaw 编排器专用的 LLM 调用器。
+class _CodexTaskLLM:
+    """Codex skill 编排器专用的 LLM 调用器。
 
-    从 config.openclaw 读取 base_url / api_key / model。
+    从 config.codex 读取 base_url / api_key / model。
     不依赖环境变量（除非配置中未指定 fallback 时才读 env）。
     """
 
     def __init__(self, config: dict):
-        from openclaw_config import detect_openclaw_llm
+        from codex_config import detect_codex_llm
 
-        ocfg = config.get('openclaw', {})
-        self.base_url = ocfg.get('base_url', '').rstrip('/')
-        self.api_key = ocfg.get('api_key', '')
-        self.model = ocfg.get('model', '')
+        ccfg = config.get('codex', {})
+        self.base_url = ccfg.get('base_url', '').rstrip('/')
+        self.api_key = ccfg.get('api_key', '')
+        self.model = ccfg.get('model', '')
 
         # fallback: 也支持从环境变量读取
         if not self.base_url:
-            self.base_url = os.getenv('DTFLOW_OPENCLAW_BASE_URL', '').rstrip('/')
+            self.base_url = os.getenv('DTFLOW_CODEX_BASE_URL', '').rstrip('/')
         if not self.api_key:
-            self.api_key = os.getenv('DTFLOW_OPENCLAW_API_KEY', '')
+            self.api_key = os.getenv('DTFLOW_CODEX_API_KEY', '')
         if not self.model:
-            self.model = os.getenv('DTFLOW_OPENCLAW_MODEL', '')
+            self.model = os.getenv('DTFLOW_CODEX_MODEL', '')
 
-        # Fallback: 自动从 OpenClaw 配置读取
+        # Fallback: 自动从 Codex/OpenAI-compatible 配置读取
         if not all([self.base_url, self.api_key, self.model]):
-            oc = detect_openclaw_llm()
+            oc = detect_codex_llm()
             if not self.base_url:
                 self.base_url = oc.get('base_url', '')
             if not self.api_key:
@@ -76,7 +76,7 @@ class _OpenClawLLM:
             if not self.model:
                 self.model = oc.get('model', '')
 
-        self.timeout = ocfg.get('timeout_seconds', 900)
+        self.timeout = ccfg.get('timeout_seconds', 900)
 
     def validate(self):
         missing = []
@@ -88,9 +88,9 @@ class _OpenClawLLM:
             missing.append('model')
         if missing:
             raise RuntimeError(
-                f'openclaw 编排器 LLM 配置缺失: {", ".join(missing)}。'
-                '请在 config.json 的 openclaw 字段中配置 base_url / api_key / model，'
-                '或设置环境变量 DTFLOW_OPENCLAW_BASE_URL / DTFLOW_OPENCLAW_API_KEY / DTFLOW_OPENCLAW_MODEL。'
+                f'codex 编排器 LLM 配置缺失: {", ".join(missing)}。'
+                '请在 config.json 的 codex 字段中配置 base_url / api_key / model，'
+                '或设置环境变量 DTFLOW_CODEX_BASE_URL / DTFLOW_CODEX_API_KEY / DTFLOW_CODEX_MODEL。'
             )
 
     def chat(self, system_prompt: str, user_prompt: str,
@@ -120,14 +120,14 @@ class _OpenClawLLM:
         return data['choices'][0]['message']['content']
 
 
-class OpenClawSubagentOrchestrator(BaseOrchestrator):
-    """OpenClaw 子 agent 编排器。
+class CodexSubagentOrchestrator(BaseOrchestrator):
+    """Codex 子任务编排器。
 
-    与 LocalLLMOrchestrator 结构相同，但使用 config.openclaw 中的独立
-    base_url / api_key / model 配置，允许在 OpenClaw skill 内直接调用
+    与 LocalLLMOrchestrator 结构相同，但使用 config.codex 中的独立
+    base_url / api_key / model 配置，允许在 Codex skill 内直接调用
     任意 OpenAI-compatible 模型接口。
 
-    如果 config.openclaw 中只提供了 model（如 "Opus"），编排器会在
+    如果 config.codex 中只提供了 model，编排器会在
     validate 阶段提醒补充 base_url 和 api_key。
     """
 
@@ -142,7 +142,7 @@ class OpenClawSubagentOrchestrator(BaseOrchestrator):
             return self._run_fix(payload)
         if action == 'comprehensive_review':
             return self._run_comprehensive_review(payload)
-        raise RuntimeError(f'OpenClawSubagentOrchestrator 暂不支持 action: {action}')
+        raise RuntimeError(f'CodexSubagentOrchestrator 暂不支持 action: {action}')
 
     def _parse_or_fallback(self, action: str, raw_text: str, fallback_builder):
         try:
@@ -150,8 +150,8 @@ class OpenClawSubagentOrchestrator(BaseOrchestrator):
         except ResultParseError:
             return fallback_builder(raw_text)
 
-    def _make_llm(self) -> _OpenClawLLM:
-        return _OpenClawLLM(self.config)
+    def _make_llm(self) -> _CodexTaskLLM:
+        return _CodexTaskLLM(self.config)
 
     def _run_analyze(self, payload: dict) -> dict:
         llm = self._make_llm()

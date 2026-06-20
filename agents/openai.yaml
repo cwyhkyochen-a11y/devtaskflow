@@ -1,0 +1,7 @@
+interface:
+  display_name: "DevTaskFlow"
+  short_description: "Turn app ideas into reviewed software builds."
+  default_prompt: "Use $devtaskflow to turn my software idea into a runnable project with review checkpoints."
+
+policy:
+  allow_implicit_invocation: true

@@ -35,14 +35,14 @@
 - [x] deploy adapters（shell / ssh_shell / docker）
 - [x] archive adapter（本地归档）
 - [x] GitHub publish adapter（tag + release）
-- [x] OpenClaw orchestration adapter（v0.8.0 完善）
-- [x] ClawHub publish adapter（v0.8.0 新增）
+- [x] Codex orchestration adapter（v1.2.0 迁移）
+- [x] GitHub publish adapter（v0.8.0 新增）
 
 ## Phase 5 ✅ 文档与示例
 
 - [x] README 完善
 - [x] 示例项目骨架
-- [x] 安装方式文档（clawhub install）
+- [x] Codex skill 安装方式文档
 - [x] 迁移指南（dev-pipeline → DevTaskFlow）
 
 ## 设计决策
@@ -50,7 +50,7 @@
 1. 项目配置目录采用 `.dtflow/`
 2. 命令名采用 `dtflow`
 3. 敏感配置全部走环境变量
-4. OpenClaw 协作作为 adapter，而不是核心硬依赖
+4. Codex 协作作为 adapter，而不是核心硬依赖
 5. 旧版 dev-pipeline 不直接硬改，采用新目录重建
-6. 编排器统一走 OpenAI compatible API，不依赖 OpenClaw 运行时
+6. 编排器统一走 OpenAI compatible API，不依赖 Codex 运行时内部 API
 7. 部署信息脱敏显示，安全合规

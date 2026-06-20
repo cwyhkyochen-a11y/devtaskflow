@@ -2,7 +2,7 @@
 
 支持三档模式：
 - auto: 自动检测已有配置（极简模式）
-- guided: 引导模式（只需填 API Key）
+- guided: 引导模式（选择服务、填写 API Key 和模型 ID）
 - advanced: 高级模式（手动配置所有参数）
 """
 from __future__ import annotations
@@ -14,34 +14,16 @@ from pathlib import Path
 
 PRESETS = {
     '1': {
-        'name': 'Claude Opus 4.6（推荐）',
-        'base_url': 'https://api.anthropic.com/v1',
-        'model_hint': 'claude-opus-4-6',
-        'note': '综合能力最强，推荐用于复杂开发任务',
+        'name': 'OpenAI-compatible API（推荐）',
+        'base_url': 'https://api.openai.com/v1',
+        'model_hint': '',
+        'note': '使用你显式配置的 API Key 和模型 ID',
     },
     '2': {
-        'name': 'GPT 5.4 Pro',
-        'base_url': 'https://api.openai.com/v1',
-        'model_hint': 'gpt-5.4-pro',
-        'note': 'OpenAI 旗舰模型，大型项目首选',
-    },
-    '3': {
-        'name': 'GPT 5.4',
-        'base_url': 'https://api.openai.com/v1',
-        'model_hint': 'gpt-5.4',
-        'note': '性价比高，适合中小型项目',
-    },
-    '4': {
-        'name': '小米 Mimo V2 Pro',
-        'base_url': 'https://api.xiaomi.com/v1',
-        'model_hint': 'mimo-v2-pro',
-        'note': '国产模型，中文表现好',
-    },
-    '5': {
-        'name': '其他模型（手动填写）',
+        'name': '自定义 OpenAI-compatible API',
         'base_url': '',
         'model_hint': '',
-        'note': '⚠️ 其他模型可能无法完成完整开发任务，建议从以上 4 个中选择',
+        'note': '手动填写 API 地址',
     },
 }
 
@@ -165,7 +147,7 @@ def _detect_existing_config(project_root: Path | None = None) -> dict | None:
     检测顺序：
     1. 当前环境变量
     2. 项目目录下的 .env 文件
-    3. OpenClaw 环境下的 LLM 配置
+    3. Codex/OpenAI 环境变量（OPENAI_API_KEY / OPENAI_MODEL）
     """
     base_url = ''
     api_key = ''
@@ -186,31 +168,25 @@ def _detect_existing_config(project_root: Path | None = None) -> dict | None:
             api_key = api_key or env_config.get('DTFLOW_LLM_API_KEY', '').strip()
             model = model or env_config.get('DTFLOW_LLM_MODEL', '').strip()
 
-    # 3. 尝试检测 OpenClaw 环境变量
+    # 3. 尝试检测 Codex/OpenAI 环境变量
     if not (base_url and api_key and model):
-        oc_base = os.environ.get('OPENAI_BASE_URL', '').strip()
-        oc_key = os.environ.get('OPENAI_API_KEY', '').strip()
-        oc_model = os.environ.get('OPENAI_MODEL', '').strip()
-        base_url = base_url or oc_base
-        api_key = api_key or oc_key
-        model = model or oc_model
+        codex_base = os.environ.get('OPENAI_BASE_URL', '').strip()
+        codex_key = os.environ.get('OPENAI_API_KEY', '').strip()
+        codex_model = os.environ.get('OPENAI_MODEL', '').strip()
+        base_url = base_url or codex_base
+        api_key = api_key or codex_key
+        model = model or codex_model
 
-    # 4. 尝试从 OpenClaw 主配置自动检测
+    # 4. 尝试从 Codex-friendly 配置自动检测
     if not (base_url and api_key and model):
         try:
-            from openclaw_config import detect_openclaw_llm
-            oc = detect_openclaw_llm()
+            from codex_config import detect_codex_llm
+            oc = detect_codex_llm(project_root)
             base_url = base_url or oc.get('base_url', '').strip()
             api_key = api_key or oc.get('api_key', '').strip()
             model = model or oc.get('model', '').strip()
         except Exception:
             pass
-
-    # 5. 再尝试 OpenRouter 等常见变量
-    if not base_url:
-        base_url = os.environ.get('OPENROUTER_BASE_URL', '').strip()
-    if not api_key:
-        api_key = os.environ.get('OPENROUTER_API_KEY', '').strip()
 
     # 验证：至少需要 api_key 和 model
     if api_key and model:
@@ -241,16 +217,6 @@ def _parse_env_file(env_path: Path) -> dict:
 
 def _guess_base_url(model: str) -> str:
     """根据模型名猜测 base_url。"""
-    model_lower = model.lower()
-    if 'claude' in model_lower or 'anthropic' in model_lower:
-        return 'https://api.anthropic.com/v1'
-    if 'gpt' in model_lower or 'o1' in model_lower or 'o3' in model_lower:
-        return 'https://api.openai.com/v1'
-    if 'mimo' in model_lower or 'xiaomi' in model_lower:
-        return 'https://api.xiaomi.com/v1'
-    if 'gemini' in model_lower or 'google' in model_lower:
-        return 'https://generativelanguage.googleapis.com/v1'
-    # 默认用 OpenAI 兼容格式
     return 'https://api.openai.com/v1'
 
 
@@ -258,15 +224,15 @@ def _guess_base_url(model: str) -> str:
 
 def _setup_auto(project_root: Path | None = None) -> int:
     """极简模式 — 自动检测已有配置并应用。"""
-    # 优先尝试从 OpenClaw 主配置自动读取
+    # 优先尝试从 Codex/OpenAI-compatible 配置自动读取
     try:
-        from openclaw_config import detect_openclaw_llm
-        oc = detect_openclaw_llm()
+        from codex_config import detect_codex_llm
+        oc = detect_codex_llm(project_root)
         if oc.get('base_url') and oc.get('api_key') and oc.get('model'):
             os.environ['DTFLOW_LLM_BASE_URL'] = oc['base_url']
             os.environ['DTFLOW_LLM_API_KEY'] = oc['api_key']
             os.environ['DTFLOW_LLM_MODEL'] = oc['model']
-            print(f'✅ 自动使用 OpenClaw 配置: {oc["model"]}')
+            print(f'✅ 自动使用 Codex/OpenAI 配置: {oc["model"]}')
             _apply_config(oc, project_root)
             _run_doctor_check()
             return 0
@@ -299,9 +265,9 @@ def _setup_auto(project_root: Path | None = None) -> int:
 # ── 引导模式：只需填 API Key ─────────────────────────────────
 
 def _setup_guided(project_root: Path | None = None) -> int:
-    """引导模式 — 只需选模型 + 填 API Key，其他自动。"""
+    """引导模式 — 选择服务 + 填 API Key 和模型 ID，其他自动。"""
     print()
-    print('🚀 快速配置（只需 2 步）')
+    print('🚀 快速配置')
     print('=' * 40)
     print()
     print('选择你想用的 AI 服务：')
@@ -323,12 +289,12 @@ def _setup_guided(project_root: Path | None = None) -> int:
         print('❌ API Key 不能为空')
         return 1
 
-    # 自动推断 base_url 和 model
+    # 自动推断 base_url，模型名由用户按当前账号可用列表填写
     base_url = preset['base_url']
-    model = preset['model_hint']
+    model = ''
 
-    # 如果是"其他模型"，需要额外输入
-    if choice == '5':
+    # 自定义 API 需要额外输入地址
+    if choice == '2':
         print()
         model = _prompt('请输入模型名称')
         if not model:
@@ -337,6 +303,11 @@ def _setup_guided(project_root: Path | None = None) -> int:
         base_url = _prompt('请输入 API 地址', _guess_base_url(model))
         if not base_url:
             print('❌ API 地址不能为空')
+            return 1
+    else:
+        model = _prompt('请输入模型名称（使用你平台中可用的模型 ID）', preset.get('model_hint', ''))
+        if not model:
+            print('❌ 模型名称不能为空')
             return 1
 
     # 测试连接
@@ -398,7 +369,7 @@ def _setup_advanced(project_root: Path | None = None) -> int:
 
     print()
     choice = _prompt('请选择（输入数字）', '1')
-    preset = PRESETS.get(choice, PRESETS['5'])
+    preset = PRESETS.get(choice, PRESETS['2'])
 
     print()
 

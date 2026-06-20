@@ -23,11 +23,13 @@
     "orchestration": "local_llm",
     "publish": "github"
   },
-  "openclaw": {
-    "agent_id": "skill-runner",
+  "codex": {
+    "base_url": "",
+    "api_key": "",
+    "model": "",
+    "agent_id": "codex-skill-runner",
     "mode": "run",
-    "timeout_seconds": 900,
-    "model": "Opus"
+    "timeout_seconds": 900
   },
   "deploy": {
     "build_command": "",

@@ -40,11 +40,11 @@ def load_projects(board_path: Path) -> list[dict]:
 def save_projects(board_path: Path, projects: list[dict]):
     board_path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
-        '# PROJECTS.md',
+        '# DevTaskFlow Project Index',
         '',
-        'DevTaskFlow 项目总看板。',
+        'Codex 版 DevTaskFlow 维护的项目索引。',
         '',
-        '| 序号 | 项目名 | 状态 | 最新版本 | 路径 | 最后更新 | 备注 |',
+        '| 序号 | 项目名 | 状态 | 最新版本 | 项目目录 | 最后更新 | 备注 |',
         '|---|---|---|---|---|---|---|',
     ]
     for idx, project in enumerate(projects, start=1):
